@@ -1,0 +1,29 @@
+.vscode
+*.ddmesh
+.mayaSwatches
+*~
+*.tags*
+*.swp
+GPATH
+GRTAGS
+GSYMS
+GTAGS
+imgui.ini
+ddConfig.h
+
+#**************** Folders to ignore if unzipped ***************************
+
+glm
+imgui
+glfw
+vulkan_1*
+
+#**************** General folders to always ignore ************************
+
+release
+debug
+x64
+bin
+lib
+build
+Projects

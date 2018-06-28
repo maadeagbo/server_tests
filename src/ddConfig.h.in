@@ -1,0 +1,7 @@
+#define DD_VERSION_MAJOR @Server_Test_VERSION_MAJOR@
+#define DD_VERSION_MINOR @Server_Test_VERSION_MINOR@
+#define DD_VERSION_PATCH @Server_Test_VERSION_PATCH@
+#cmakedefine USE_CLANG
+#cmakedefine DD_VERBOSE
+
+#define ROOT_DIR "@PROJECT_SOURCE_DIR@"
