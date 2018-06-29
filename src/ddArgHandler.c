@@ -1,6 +1,9 @@
 #include "ddArgHandler.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+
+static struct ddArgStat h_arg;
 
 void init_arg_handler( struct ddArgHandler* restrict handler,
                        const char* restrict help_info )
@@ -9,12 +12,15 @@ void init_arg_handler( struct ddArgHandler* restrict handler,
 
     *handler = ( struct ddArgHandler ){.args_count = 0};
 
-    handler->help_str = help_info;
-
     for( uint32_t i = 0; i < MAX_ARGS; i++ )
         handler->args[i] = ( struct ddArgNode ){0};
 
-    register_arg( handler, "help", 'h', ARG_STR );
+    h_arg = ( struct ddArgStat ){.description = help_info,  //
+                                 .full_id = "help",         //
+                                 .type_flag = ARG_BOOL,
+                                 .short_id = 'h'};
+
+    register_arg( handler, &h_arg );
 }
 
 static void set_arg( struct ddArgNode* restrict arg,
@@ -25,16 +31,16 @@ static void set_arg( struct ddArgNode* restrict arg,
     switch( arg->type_flag )
     {
         case ARG_BOOL:
-            arg->b = *value ? true : false;
+            arg->val.b = true;
             break;
         case ARG_FLT:
-            arg->f = strtof( value, NULL );
+            arg->val.f = strtof( value, NULL );
             break;
         case ARG_INT:
-            arg->i = strtod( value, NULL );
+            arg->val.i = strtod( value, NULL );
             break;
         case ARG_STR:
-            arg->c = value;
+            arg->val.c = value;
             break;
         default:
             break;
@@ -57,17 +63,29 @@ void poll_args( struct ddArgHandler* restrict handler,
             curr_arg = NULL;
             next_arg++;
 
-            while( *next_arg )
+            if( *next_arg == '-' )
             {
+                next_arg++;
                 for( uint32_t j = 0; j < handler->args_count; j++ )
-                    if( *next_arg == handler->short_id[j] )
+                    if( strcmp( next_arg, handler->long_id[j] ) == 0 )
                     {
                         curr_arg = &handler->args[j];
                         set_arg( curr_arg, "1" );
+                        break;
                     }
-
-                next_arg++;
             }
+            else
+                while( *next_arg )
+                {
+                    for( uint32_t j = 0; j < handler->args_count; j++ )
+                        if( *next_arg == handler->short_id[j] )
+                        {
+                            curr_arg = &handler->args[j];
+                            set_arg( curr_arg, "1" );
+                        }
+
+                    next_arg++;
+                }
         }
         else
             set_arg( curr_arg, next_arg );
@@ -75,15 +93,16 @@ void poll_args( struct ddArgHandler* restrict handler,
 }
 
 void register_arg( struct ddArgHandler* restrict handler,
-                   const char* restrict full_id,
-                   const char short_id,
-                   const uint32_t type_flag )
+                   const struct ddArgStat* restrict new_arg )
 {
-    if( !handler || !full_id || handler->args_count == MAX_ARGS ) return;
+    if( !handler || !new_arg->full_id || handler->args_count == MAX_ARGS )
+        return;
 
-    handler->long_id[handler->args_count] = full_id;
-    handler->short_id[handler->args_count] = short_id;
-    handler->args[handler->args_count].type_flag = type_flag;
+    handler->long_id[handler->args_count] = new_arg->full_id;
+    handler->short_id[handler->args_count] = new_arg->short_id;
+    handler->args[handler->args_count].type_flag = new_arg->type_flag;
+    handler->args[handler->args_count].description = new_arg->description;
+    handler->args[handler->args_count].val = new_arg->default_val;
 
     handler->args_count++;
 }
@@ -122,12 +141,17 @@ void print_arg_help_msg( const struct ddArgHandler* restrict handler )
 {
     if( !handler ) return;
 
-    if( handler->help_str ) printf( "%s\n", handler->help_str );
+    // help description always 1st
+    printf( "%s\n", handler->args[0].description );
 
     for( uint32_t i = 0; i < handler->args_count; i++ )
     {
         printf( "  -%c\t %s\t", handler->short_id[i], handler->long_id[i] );
-        printf( "(%s)", print_type( &handler->args[i] ) );
+        printf( ">%-10s", print_type( &handler->args[i] ) );
+
+        if( handler->short_id[i] != 'h' )
+            printf( "%s", handler->args[i].description );
+
         printf( "\n" );
     }
 }

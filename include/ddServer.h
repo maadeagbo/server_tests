@@ -14,4 +14,6 @@ struct ddAddressInfo
     int32_t status;
 };
 
-void get_server_info( struct ddAddressInfo* restrict address );
+void get_server_info( struct ddAddressInfo* restrict address,
+                      const char* ip,
+                      const char* port );

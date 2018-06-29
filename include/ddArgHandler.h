@@ -19,9 +19,8 @@ enum
 
 #undef ENUM_VAL
 
-struct ddArgNode
+struct ddArgVal
 {
-    uint32_t type_flag;
     union {
         float f;
         int32_t i;
@@ -30,25 +29,37 @@ struct ddArgNode
     };
 };
 
+struct ddArgNode
+{
+    uint32_t type_flag;
+    const char* description;
+    struct ddArgVal val;
+};
+
 struct ddArgHandler
 {
     char short_id[MAX_ARGS];
     const char* long_id[MAX_ARGS];
-
-    const char* help_str;
 
     struct ddArgNode args[MAX_ARGS];
 
     uint32_t args_count;
 };
 
+struct ddArgStat
+{
+    const char* description;
+    const char* full_id;
+    uint32_t type_flag;
+    char short_id;
+    struct ddArgVal default_val;
+};
+
 void init_arg_handler( struct ddArgHandler* restrict handler,
                        const char* restrict help_info );
 
 void register_arg( struct ddArgHandler* restrict handler,
-                   const char* restrict full_id,
-                   const char short_id,
-                   const uint32_t type_flag );
+                   const struct ddArgStat* restrict new_arg );
 
 const struct ddArgNode* extract_arg(
     const struct ddArgHandler* restrict handler, const char short_id );

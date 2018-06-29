@@ -94,7 +94,7 @@ set(Server_Test_VERSION_MINOR 0)
 set(Server_Test_VERSION_PATCH 1)
 
 # print messages
-option(DD_VEBOSE "Print out all server information to stdout" OFF)
+option(VEBOSE "Print out all server information to stdout" OFF)
 
 # configure a header to pass CMake settings to the source code
 configure_file (
