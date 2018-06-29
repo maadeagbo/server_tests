@@ -6,6 +6,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#include "ddConfig.h"
+
 struct ddAddressInfo
 {
     struct addrinfo hints;
