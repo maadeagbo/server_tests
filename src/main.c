@@ -22,8 +22,16 @@ int main( int argc, char const* argv[] )
         .short_id = 'p',
         .default_val = {.c = "4321"}};
 
+    struct ddArgStat server_arg = {
+        .description = "Set instance as server (default : false)",
+        .full_id = "server",
+        .type_flag = ARG_BOOL,
+        .short_id = 's',
+        .default_val = {.b = true}};
+
     register_arg( &arg_handler, &ip_arg );
     register_arg( &arg_handler, &port_arg );
+    register_arg( &arg_handler, &server_arg );
 
     poll_args( &arg_handler, argc, argv );
 
@@ -35,9 +43,10 @@ int main( int argc, char const* argv[] )
 
     struct ddAddressInfo server_addr;
 
-    get_server_info( &server_addr,
-                     extract_arg( &arg_handler, 'i' )->val.c,
-                     extract_arg( &arg_handler, 'p' )->val.c );
+    create_socket( &server_addr,
+                   extract_arg( &arg_handler, 'i' )->val.c,
+                   extract_arg( &arg_handler, 'p' )->val.c,
+                   extract_arg( &arg_handler, 's' )->val.b );
 
     return 0;
 }
