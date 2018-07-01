@@ -146,7 +146,7 @@ void print_arg_help_msg( const struct ddArgHandler* restrict handler )
 
     for( uint32_t i = 0; i < handler->args_count; i++ )
     {
-        printf( "  -%c\t %s\t", handler->short_id[i], handler->long_id[i] );
+        printf( "  -%-4c --%-10s", handler->short_id[i], handler->long_id[i] );
         printf( ">%-10s", print_type( &handler->args[i] ) );
 
         if( handler->short_id[i] != 'h' )
