@@ -9,6 +9,10 @@
 
 #include "ddConfig.h"
 
+#ifndef BACKLOG
+#define BACKLOG 10
+#endif
+
 struct ddAddressInfo
 {
     struct addrinfo hints;

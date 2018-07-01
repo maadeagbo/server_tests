@@ -65,21 +65,24 @@ void create_socket( struct ddAddressInfo* restrict address,
             continue;
         }
 
-        if( setsockopt( socket_fd,
-                        SOL_SOCKET,
-                        SO_REUSEADDR,
-                        &yes,
-                        sizeof( int32_t ) ) == -1 )
+        if( create_server ) 
         {
-            fprintf( stderr, "Skip::Socket port reuse" );
-            continue;
-        }
+            if( setsockopt( socket_fd,
+                            SOL_SOCKET,
+                            SO_REUSEADDR,
+                            &yes,
+                            sizeof( int32_t ) ) == -1 )
+            {
+                fprintf( stderr, "Skip::Socket port reuse" );
+                continue;
+            }
 
-        if( bind( socket_fd, next_ip->ai_addr, next_ip->ai_addrlen ) == -1 )
-        {
-            close( socket_fd );
-            fprintf( stderr, "Skip::Socket bind" );
-            continue;
+            if( bind( socket_fd, next_ip->ai_addr, next_ip->ai_addrlen ) == -1 )
+            {
+                close( socket_fd );
+                fprintf( stderr, "Skip::Socket bind" );
+                continue;
+            }
         }
 
         address->socket_fd = socket_fd;

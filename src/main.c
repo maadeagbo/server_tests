@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "ddConfig.h"
 #include "ddArgHandler.h"
 #include "ddServer.h"
@@ -45,8 +46,32 @@ int main( int argc, char const* argv[] )
 
     create_socket( &server_addr,
                    extract_arg( &arg_handler, 'i' )->val.c,
-                   extract_arg( &arg_handler, 'p' )->val.c,
-                   extract_arg( &arg_handler, 's' )->val.b );
+                   extract_arg( &arg_handler, 'p' )->val.c );
+    
+    if( server_addr.socket_fd < 0 )
+    {
+        fprintf( stderr, "Fatal Error::Socket not created" );
+        return 1;
+    }
+    
+    if( extract_arg( &arg_handler, 's' )->val.b )
+    {
+        if( server_addr.selected == NULL )
+        {
+            fprintf( stderr, "Fatal Error::Server failed to bind" );
+            return 1;
+        }
+
+        if( listen( server_addr.socket_fd, BACKLOG ) == -1 )
+        {
+            fprintf( stderr, "Fatal Error::Server failed to listen on port" );
+            return 1;
+        }
+
+#ifdef VERBOSE
+        printf( "Server waiting on connections...\n" );
+#endif
+    }
 
     return 0;
 }
