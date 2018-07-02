@@ -11,8 +11,13 @@
 #include "ddServer.h"
 
 #ifdef _WIN32
-HANDLE hConsole;
-int32_t console_color_reset;
+static HANDLE s_hconsole;
+static WORD s_win23_red = FOREGROUND_RED | FOREGROUND_INTENSITY;
+static WORD s_win23_green = FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+static WORD s_win23_yellow =
+    FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+static WORD s_win23_white =
+    FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
 #endif  // _WIN32
 
 #ifndef ENUM_VAL
@@ -30,22 +35,22 @@ enum
 
 static void set_output_color( uint8_t color )
 {
-    // FlushConsoleInputBuffer( hConsole );
+    // FlushConsoleInputBuffer( s_hconsole );
 
     switch( color )
     {
 #ifdef _WIN32
         case CONSOLE_R:
-            SetConsoleTextAttribute( hConsole, 12 );
+            SetConsoleTextAttribute( s_hconsole, s_win23_red );
             break;
         case CONSOLE_Y:
-            SetConsoleTextAttribute( hConsole, 14 );
+            SetConsoleTextAttribute( s_hconsole, s_win23_yellow );
             break;
         case CONSOLE_G:
-            SetConsoleTextAttribute( hConsole, 10 );
+            SetConsoleTextAttribute( s_hconsole, s_win23_green );
             break;
         default:
-            SetConsoleTextAttribute( hConsole, 15 );
+            SetConsoleTextAttribute( s_hconsole, s_win23_white );
 #else
         case CONSOLE_R:
             fprintf( stdout, "\033[31;1;1m" );
@@ -76,7 +81,7 @@ void dd_server_init_win32()
         exit( 1 );
     }
 
-    hConsole = GetStdHandle( STD_OUTPUT_HANDLE );
+    s_hconsole = GetStdHandle( STD_OUTPUT_HANDLE );
 }
 
 void dd_server_cleanup_win32() { WSACleanup(); }
@@ -273,8 +278,7 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
         fcntl( address->socket_fd, F_SETFL, O_NONBLOCK );
 #endif  // __linux__
 #ifdef VERBOSE
-        dd_server_write_out( DDLOG_STATUS,
-                             "Server waiting on connections...\n" );
+        dd_server_write_out( DDLOG_STATUS, "Server waiting on data...\n" );
 #endif
     }
 
