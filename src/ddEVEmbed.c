@@ -9,14 +9,22 @@
 #pragma GCC diagnostic ignored "-Wparentheses"
 #endif  // __GNUC__
 
-#ifdef MSVC
-#pragma warning( push )
-//#pragma warning( disable : 4723 )
-#endif  // MSVC
-
 #ifdef _WIN32
-#include "evwrap.h"
-#endif  // __linux__
+#pragma warning( push )
+#pragma warning( disable : 4706 )
+#pragma warning( disable : 4244 )
+#pragma warning( disable : 4456 )
+#pragma warning( disable : 4457 )
+#pragma warning( disable : 4245 )
+#pragma warning( disable : 4100 )
+#pragma warning( disable : 4189 )
+#pragma warning( disable : 4996 )
+#pragma warning( disable : 4133 )
+#pragma warning( disable : 4127 )
+#endif  // _WIN32
+
+#include "ddEVEmbed.h"
+
 #include "ev.c"
 
 #ifdef __GNUC__
@@ -25,6 +33,6 @@
 #pragma GCC diagnostic pop
 #endif  // __GNUC__
 
-#ifdef MSVC
+#ifdef _WIN32
 #pragma warning( pop )
-#endif  // MSVC
+#endif  // _WIN32

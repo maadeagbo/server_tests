@@ -5,8 +5,8 @@
 
 static struct ddArgStat h_arg;
 
-void init_arg_handler( struct ddArgHandler* restrict handler,
-                       const char* restrict help_info )
+void init_arg_handler( struct ddArgHandler* c_restrict handler,
+                       const char* c_restrict help_info )
 {
     if( !handler ) return;
 
@@ -23,8 +23,8 @@ void init_arg_handler( struct ddArgHandler* restrict handler,
     register_arg( handler, &h_arg );
 }
 
-static void set_arg( struct ddArgNode* restrict arg,
-                     const char* restrict value )
+static void set_arg( struct ddArgNode* c_restrict arg,
+                     const char* c_restrict value )
 {
     if( !arg ) return;
 
@@ -37,7 +37,7 @@ static void set_arg( struct ddArgNode* restrict arg,
             arg->val.f = strtof( value, NULL );
             break;
         case ARG_INT:
-            arg->val.i = strtod( value, NULL );
+            arg->val.i = strtol( value, NULL, 10 );
             break;
         case ARG_STR:
             arg->val.c = value;
@@ -47,9 +47,9 @@ static void set_arg( struct ddArgNode* restrict arg,
     }
 }
 
-void poll_args( struct ddArgHandler* restrict handler,
+void poll_args( struct ddArgHandler* c_restrict handler,
                 const uint32_t argc,
-                const char* const argv[restrict] )
+                const char* const argv[] )
 {
     if( !handler || handler->args_count == 0 ) return;
 
@@ -92,8 +92,8 @@ void poll_args( struct ddArgHandler* restrict handler,
     }
 }
 
-void register_arg( struct ddArgHandler* restrict handler,
-                   const struct ddArgStat* restrict new_arg )
+void register_arg( struct ddArgHandler* c_restrict handler,
+                   const struct ddArgStat* c_restrict new_arg )
 {
     if( !handler || !new_arg->full_id || handler->args_count == MAX_ARGS )
         return;
@@ -108,7 +108,7 @@ void register_arg( struct ddArgHandler* restrict handler,
 }
 
 const struct ddArgNode* extract_arg(
-    const struct ddArgHandler* restrict handler, const char short_id )
+    const struct ddArgHandler* c_restrict handler, const char short_id )
 {
     if( !handler ) return NULL;
 
@@ -118,7 +118,7 @@ const struct ddArgNode* extract_arg(
     return NULL;
 }
 
-static const char* print_type( const struct ddArgNode* restrict arg )
+static const char* print_type( const struct ddArgNode* c_restrict arg )
 {
     if( !arg ) return "";
 
@@ -137,7 +137,7 @@ static const char* print_type( const struct ddArgNode* restrict arg )
     }
 }
 
-void print_arg_help_msg( const struct ddArgHandler* restrict handler )
+void print_arg_help_msg( const struct ddArgHandler* c_restrict handler )
 {
     if( !handler ) return;
 

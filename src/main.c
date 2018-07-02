@@ -77,6 +77,11 @@ int main( int argc, char const* argv[] )
         return 0;
     }
 
+#ifdef _WIN32
+	dd_server_init_win32();
+#endif // _WIN32
+
+
     struct ddAddressInfo server_addr;
 
     const char* ip_addr_str = extract_arg( &arg_handler, 'i' )->val.c;
@@ -134,11 +139,22 @@ int main( int argc, char const* argv[] )
         // parse message
     }
 
+	dd_close_socket( &server_addr.socket_fd );
+	
+	//if ( listen_flag ) // clean up accepted sockets
+
+#ifdef _WIN32
+	void dd_server_cleanup_win32();
+#endif // _WIN32
+
+
     return 0;
 }
 
 static void io_callback( EV_P_ ev_io* io_w, int r_events )
 {
+	UNUSED_VAR( loop );
+
     if( io_w == io_watchers ) return;
 
     if( r_events & EV_READ )
@@ -152,6 +168,8 @@ static void timer_callback( struct ev_loop* t_loop,
                             ev_timer* timer_w,
                             int r_events )
 {
+	UNUSED_VAR( r_events );
+
     idle_time += timer_w->repeat;
 
     if( idle_time > timeout_limit )
@@ -166,6 +184,9 @@ static void sigint_callback( struct ev_loop* sig_loop,
                              ev_signal* sig_w,
                              int r_events )
 {
-    dd_server_write_out( DDLOG_STATUS, "FORCE_CLOSE. Closing connection.\n" );
+	UNUSED_VAR( r_events );
+	UNUSED_VAR( sig_w );
+
+    dd_server_write_out( DDLOG_WARNING, "FORCE_CLOSE. Closing connection.\n" );
     ev_break( sig_loop, EVBREAK_ALL );
 }

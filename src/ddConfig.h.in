@@ -11,3 +11,13 @@
 #ifdef __linux__
 #include "ev.h"
 #endif // __linux__
+
+#ifdef _WIN32
+#define c_restrict __restrict
+#else
+#define c_restrict restrict
+#endif
+
+#ifndef UNUSED_VAR
+#define UNUSED_VAR( x ) (void)x
+#endif

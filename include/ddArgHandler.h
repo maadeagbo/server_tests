@@ -1,7 +1,14 @@
 #pragma once
 
+#ifdef _WIN32
+#pragma warning( disable : 4201 ) // union warning
+#pragma warning( disable : 4204 ) // struct constructor
+#endif  // _WIN32
+
 #include <stdint.h>
 #include <stdbool.h>
+
+#include "ddConfig.h"
 
 #ifndef MAX_ARGS
 #define MAX_ARGS 10
@@ -57,17 +64,17 @@ struct ddArgStat
     struct ddArgVal default_val;
 };
 
-void init_arg_handler( struct ddArgHandler* restrict handler,
-                       const char* restrict help_info );
+void init_arg_handler( struct ddArgHandler* c_restrict handler,
+                       const char* c_restrict help_info );
 
-void register_arg( struct ddArgHandler* restrict handler,
-                   const struct ddArgStat* restrict new_arg );
+void register_arg( struct ddArgHandler* c_restrict handler,
+                   const struct ddArgStat* c_restrict new_arg );
 
 const struct ddArgNode* extract_arg(
-    const struct ddArgHandler* restrict handler, const char short_id );
+    const struct ddArgHandler* c_restrict handler, const char short_id );
 
-void poll_args( struct ddArgHandler* restrict handler,
+void poll_args( struct ddArgHandler* c_restrict handler,
                 const uint32_t argc,
-                const char* const argv[restrict] );
+                const char* const argv[] );
 
-void print_arg_help_msg( const struct ddArgHandler* restrict handler );
+void print_arg_help_msg( const struct ddArgHandler* c_restrict handler );

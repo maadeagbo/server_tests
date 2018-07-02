@@ -149,6 +149,11 @@ target_include_directories( server_program PUBLIC
 	"${PROJECT_SOURCE_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/libev-4.24"
 )
+
+if( WIN32 )
+	target_link_libraries( server_program ws2_32 )
+endif( WIN32 )
+
 # make sure every other necessary executable, lib, and .h file is built
 #add_dependencies(vulkan_program DDSTR_LIB)
 
