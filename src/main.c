@@ -78,9 +78,8 @@ int main( int argc, char const* argv[] )
     }
 
 #ifdef _WIN32
-	dd_server_init_win32();
-#endif // _WIN32
-
+    dd_server_init_win32();
+#endif  // _WIN32
 
     struct ddAddressInfo server_addr;
 
@@ -105,7 +104,7 @@ int main( int argc, char const* argv[] )
         // first watcher is always the primary one
         struct ddIODataEV io_info = {
             .socketfd = server_addr.socket_fd,
-            .io_flags = EV_READ | EV_WRITE,
+            .io_flags = EV_WRITE,
             .io_ptr = io_watchers,
             .cb_func = io_callback,
             .loop_ptr = loop,
@@ -139,23 +138,20 @@ int main( int argc, char const* argv[] )
         // parse message
     }
 
-	dd_close_socket( &server_addr.socket_fd );
-	
-	//if ( listen_flag ) // clean up accepted sockets
+    dd_close_socket( &server_addr.socket_fd );
+
+// if ( listen_flag ) // clean up accepted sockets
 
 #ifdef _WIN32
-	void dd_server_cleanup_win32();
-#endif // _WIN32
-
+    void dd_server_cleanup_win32();
+#endif  // _WIN32
 
     return 0;
 }
 
 static void io_callback( EV_P_ ev_io* io_w, int r_events )
 {
-	UNUSED_VAR( loop );
-
-    if( io_w == io_watchers ) return;
+    UNUSED_VAR( loop );
 
     if( r_events & EV_READ )
     {
@@ -168,7 +164,7 @@ static void timer_callback( struct ev_loop* t_loop,
                             ev_timer* timer_w,
                             int r_events )
 {
-	UNUSED_VAR( r_events );
+    UNUSED_VAR( r_events );
 
     idle_time += timer_w->repeat;
 
@@ -184,8 +180,8 @@ static void sigint_callback( struct ev_loop* sig_loop,
                              ev_signal* sig_w,
                              int r_events )
 {
-	UNUSED_VAR( r_events );
-	UNUSED_VAR( sig_w );
+    UNUSED_VAR( r_events );
+    UNUSED_VAR( sig_w );
 
     dd_server_write_out( DDLOG_WARNING, "FORCE_CLOSE. Closing connection.\n" );
     ev_break( sig_loop, EVBREAK_ALL );

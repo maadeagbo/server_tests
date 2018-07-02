@@ -2,7 +2,7 @@
 #include <unistd.h>
 #else
 #include <io.h>
-#endif // __linux__
+#endif  // __linux__
 
 #include <stdio.h>
 #include <string.h>
@@ -11,9 +11,9 @@
 #include "ddServer.h"
 
 #ifdef _WIN32
-HANDLE  hConsole;
+HANDLE hConsole;
 int32_t console_color_reset;
-#endif // _WIN32
+#endif  // _WIN32
 
 #ifndef ENUM_VAL
 #define ENUM_VAL( x ) 1 << x
@@ -21,76 +21,74 @@ int32_t console_color_reset;
 
 enum
 {
-	CONSOLE_R = ENUM_VAL( 0 ),
-	CONSOLE_Y = ENUM_VAL( 1 ),
-	CONSOLE_G = ENUM_VAL( 2 ),
+    CONSOLE_R = ENUM_VAL( 0 ),
+    CONSOLE_Y = ENUM_VAL( 1 ),
+    CONSOLE_G = ENUM_VAL( 2 ),
 };
 
 #undef ENUM_VAL
 
-static void set_output_color( uint8_t color ) 
+static void set_output_color( uint8_t color )
 {
+    // FlushConsoleInputBuffer( hConsole );
 
-	//FlushConsoleInputBuffer( hConsole );
-
-	switch (color)
-	{
-	case CONSOLE_R:
+    switch( color )
+    {
 #ifdef _WIN32
-		SetConsoleTextAttribute( hConsole, 12 );
+        case CONSOLE_R:
+            SetConsoleTextAttribute( hConsole, 12 );
+            break;
+        case CONSOLE_Y:
+            SetConsoleTextAttribute( hConsole, 14 );
+            break;
+        case CONSOLE_G:
+            SetConsoleTextAttribute( hConsole, 10 );
+            break;
+        default:
+            SetConsoleTextAttribute( hConsole, 15 );
 #else
-		fprintf( stdout, "\033[31;1;1m" );
-#endif // _WIN32
-		break;
-	case CONSOLE_Y:
-#ifdef _WIN32
-		SetConsoleTextAttribute( hConsole, 14 );
-#else
-		fprintf( stdout, "\033[33;1;1m" );
-#endif // _WIN32
-		break;
-	case CONSOLE_G:
-#ifdef _WIN32
-		SetConsoleTextAttribute( hConsole, 10 );
-#else
-		fprintf( stdout, "\033[32;1;1m" );
-#endif // _WIN32
-		break;
-	default:
-#ifdef _WIN32
-		SetConsoleTextAttribute( hConsole, 15 );
-#else
-		fprintf( stdout, "\033[0m" );
-#endif // _WIN32
-		break;
-	}
+        case CONSOLE_R:
+            fprintf( stdout, "\033[31;1;1m" );
+            break;
+        case CONSOLE_Y:
+            fprintf( stdout, "\033[33;1;1m" );
+            break;
+        case CONSOLE_G:
+            fprintf( stdout, "\033[32;1;1m" );
+            break;
+        default:
+            fprintf( stdout, "\033[0m" );
+#endif  // _WIN32
+            break;
+    }
 }
+
+#ifdef _WIN32
 
 void dd_server_init_win32()
 {
-	WSADATA wsaData;
+    WSADATA wsaData;
 
-	if( WSAStartup( MAKEWORD( 2, 0 ), &wsaData ) != 0 )
-	{
-		dd_server_write_out( DDLOG_ERROR, "Failed to initialize Win32 WSADATA\n" );
-		exit( 1 );
-	}
+    if( WSAStartup( MAKEWORD( 2, 0 ), &wsaData ) != 0 )
+    {
+        dd_server_write_out( DDLOG_ERROR,
+                             "Failed to initialize Win32 WSADATA\n" );
+        exit( 1 );
+    }
 
-	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    hConsole = GetStdHandle( STD_OUTPUT_HANDLE );
 }
 
-void dd_server_cleanup_win32()
-{
-	WSACleanup();
-}
+void dd_server_cleanup_win32() { WSACleanup(); }
+#endif  // _WIN32
 
 void dd_close_socket( int32_t* c_restrict socket )
 {
 #ifdef EV_SELECT_IS_WINSOCKET
-	closesocket( _get_osfhandle(*socket) );
+    closesocket( _get_osfhandle( *socket ) );
 #else
-	close( *socket );
-#endif // EV_SELECT_IS_WINSOCKET
+    close( *socket );
+#endif  // EV_SELECT_IS_WINSOCKET
 }
 
 void dd_server_write_out( const uint32_t log_type,
@@ -99,7 +97,7 @@ void dd_server_write_out( const uint32_t log_type,
 {
     FILE* file = stdout;
     const char* type = 0;
-	uint8_t color = 0;
+    uint8_t color = 0;
 
     switch( log_type )
     {
@@ -108,11 +106,11 @@ void dd_server_write_out( const uint32_t log_type,
             break;
         case DDLOG_ERROR:
             type = "error";
-			color = CONSOLE_R;
+            color = CONSOLE_R;
             break;
         case DDLOG_WARNING:
             type = "warning";
-			color = CONSOLE_Y;
+            color = CONSOLE_Y;
             break;
         case DDLOG_NOTAG:
             type = " ";
@@ -121,15 +119,15 @@ void dd_server_write_out( const uint32_t log_type,
             break;
     }
     fprintf( file, "[%10s] ", type );
-	set_output_color( color );
+    set_output_color( color );
 
     va_list args;
 
     va_start( args, fmt_str );
     vfprintf( file, fmt_str, args );
     va_end( args );
-	
-	set_output_color( 0 );
+
+    set_output_color( 0 );
 }
 
 void dd_create_socket( struct ddAddressInfo* c_restrict address,
@@ -192,17 +190,24 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
         dd_server_write_out( DDLOG_NOTAG, "\t%s: %s\n", ipver, ip_str );
 #endif
 
-		ddSocket socket_fd = 
+        ddSocket socket_fd =
 #ifdef EV_USE_WSASOCKET
-			WSASocketW( next_ip->ai_family, next_ip->ai_socktype, next_ip->ai_protocol, 0, 0, 0 );
+            WSASocketW( next_ip->ai_family,
+                        next_ip->ai_socktype,
+                        next_ip->ai_protocol,
+                        0,
+                        0,
+                        0 );
 #else
-			socket( next_ip->ai_family, next_ip->ai_socktype, next_ip->ai_protocol);
+            socket( next_ip->ai_family,
+                    next_ip->ai_socktype,
+                    next_ip->ai_protocol );
 #endif
 #ifdef EV_SELECT_IS_WINSOCKET
-		address->socket_fd = _open_osfhandle( socket_fd, 0 );
+        address->socket_fd = _open_osfhandle( socket_fd, 0 );
 #else
-		address->socket_fd = socket_fd;
-#endif // EV_SELECT_IS_WINSOCKET
+        address->socket_fd = socket_fd;
+#endif  // EV_SELECT_IS_WINSOCKET
 
         if( socket_fd == -1 )
         {
@@ -225,10 +230,10 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
             return;
         }
 #ifdef EV_SELECT_IS_WINSOCKET
-		ddSocket socket_fd = _get_osfhandle( address->socket_fd );
+        ddSocket socket_fd = _get_osfhandle( address->socket_fd );
 #else
-		ddSocket socket_fd = address->socket_fd;
-#endif // EV_SELECT_IS_WINSOCKET
+        ddSocket socket_fd = address->socket_fd;
+#endif  // EV_SELECT_IS_WINSOCKET
 
         int32_t yes = true;
         if( setsockopt( socket_fd,
@@ -248,7 +253,7 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
 #ifdef __linux__
             close( address->socket_fd );
 #elif _WIN32
-			closesocket( socket_fd );
+            closesocket( socket_fd );
 #endif
             dd_server_write_out( DDLOG_ERROR, "Socket bind\n" );
             return;
@@ -263,8 +268,10 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
                 return;
             }
         }
-// fcntl( address->socket_fd, F_SETFL, O_NONBLOCK );
 
+#ifdef __linux__
+        fcntl( address->socket_fd, F_SETFL, O_NONBLOCK );
+#endif  // __linux__
 #ifdef VERBOSE
         dd_server_write_out( DDLOG_STATUS,
                              "Server waiting on connections...\n" );

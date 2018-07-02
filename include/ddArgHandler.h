@@ -1,9 +1,9 @@
 #pragma once
 
 #ifdef _WIN32
-#pragma warning( disable : 4201 ) // union warning
-#pragma warning( disable : 4204 ) // struct constructor
-#endif  // _WIN32
+#pragma warning( disable : 4201 )  // union warning
+#pragma warning( disable : 4204 )  // struct constructor
+#endif                             // _WIN32
 
 #include <stdint.h>
 #include <stdbool.h>

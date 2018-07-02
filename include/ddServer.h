@@ -26,8 +26,7 @@
 #define ddSocket int32_t
 #elif _WIN32
 #define ddSocket SOCKET
-#endif // __linux__
-
+#endif  // __linux__
 
 enum
 {
@@ -45,12 +44,12 @@ struct ddAddressInfo
     struct addrinfo* options;
     struct addrinfo* selected;
     int32_t status;
-	int32_t socket_fd;
+    int32_t socket_fd;
 };
 
 struct ddIODataEV
 {
-	int32_t socketfd;
+    int32_t socketfd;
     int32_t io_flags;
     ev_io* io_ptr;
     ddev_func_io* cb_func;
@@ -76,7 +75,7 @@ struct ddSignalDataEV
 
 struct ddMsgData
 {
-	int32_t socketfd;
+    int32_t socketfd;
     uint16_t msg_size;
     uint16_t tag_size;
     char msg[MAX_MSG_LENGTH];
