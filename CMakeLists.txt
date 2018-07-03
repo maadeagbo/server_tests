@@ -106,15 +106,15 @@ configure_file (
 
 set( HEADERS 
 	"${PROJECT_SOURCE_DIR}/include/ddConfig.h"
-	"${PROJECT_SOURCE_DIR}/include/ddEVEmbed.h"
 	"${PROJECT_SOURCE_DIR}/include/ddArgHandler.h"
 	"${PROJECT_SOURCE_DIR}/include/ddServer.h"
+	"${PROJECT_SOURCE_DIR}/include/ddTime.h"
 )
 
 set( SOURCES
-	"${PROJECT_SOURCE_DIR}/src/ddEVEmbed.c"
 	"${PROJECT_SOURCE_DIR}/src/ddArgHandler.c"
 	"${PROJECT_SOURCE_DIR}/src/ddServer.c"
+	"${PROJECT_SOURCE_DIR}/src/ddTime.c"
 	"${PROJECT_SOURCE_DIR}/src/main.c"
 )
 
@@ -139,15 +139,12 @@ endif()
 
 # Engine executable
 add_executable(server_program
-	${EV_SOURCES}
 	${SOURCES}
-	${EV_HEADERS}
 	${HEADERS}
 )
 
 target_include_directories( server_program PUBLIC
 	"${PROJECT_SOURCE_DIR}/include"
-	"${PROJECT_SOURCE_DIR}/libev-4.24"
 )
 
 if( WIN32 )

@@ -1,28 +1,23 @@
 #include <stdio.h>
+
 #include "ddConfig.h"
 #include "ddArgHandler.h"
 #include "ddServer.h"
+#include "ddTime.h"
 
-ev_io io_watchers[BACKLOG];
-ev_timer timer_watcher;
-ev_signal sig_watcher;
+static struct ddAddressInfo s_io_watchers[BACKLOG];
 
-ev_tstamp idle_time = 0.0;
-ev_tstamp timeout_limit = 0.0;
+static double s_timeout_limit = 0.0;
 
-static void io_callback( EV_P_ ev_io* io_w, int r_events );
-
-static void timer_callback( struct ev_loop* t_loop,
-                            ev_timer* timer_w,
-                            int r_events );
-
-static void sigint_callback( struct ev_loop* sig_loop,
-                             ev_signal* sig_w,
-                             int r_events );
+void read_cb( struct ddLoop* loop );
+void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer );
 
 int main( int argc, char const* argv[] )
 {
+    UNUSED_VAR( s_io_watchers );
+
     struct ddArgHandler arg_handler;
+
     init_arg_handler( &arg_handler,
                       "Creates Server instance using provided IP address." );
 
@@ -54,22 +49,14 @@ int main( int argc, char const* argv[] )
         .short_id = 't',
         .default_val = {.f = 60.f}};
 
-    struct ddArgStat tcp_arg = {
-        .description = "Select TCP or UDP connection ( default : UDP )",
-        .full_id = "tcp",
-        .type_flag = ARG_BOOL,
-        .short_id = 'u',
-        .default_val = {.b = false}};
-
     register_arg( &arg_handler, &ip_arg );
     register_arg( &arg_handler, &port_arg );
     register_arg( &arg_handler, &server_arg );
     register_arg( &arg_handler, &timeout_arg );
-    register_arg( &arg_handler, &tcp_arg );
 
     poll_args( &arg_handler, argc, argv );
 
-    timeout_limit = extract_arg( &arg_handler, 't' )->val.f;
+    s_timeout_limit = (double)extract_arg( &arg_handler, 't' )->val.f;
 
     if( extract_arg( &arg_handler, 'h' )->val.b )
     {
@@ -77,112 +64,62 @@ int main( int argc, char const* argv[] )
         return 0;
     }
 
-#ifdef _WIN32
+#if DD_PLATFORM == DD_WIN32
     dd_server_init_win32();
-#endif  // _WIN32
+#endif  // DD_PLATFORM
 
-    struct ddAddressInfo server_addr;
+    struct ddAddressInfo server_addr = {.options = NULL, .selected = NULL};
 
     const char* ip_addr_str = extract_arg( &arg_handler, 'i' )->val.c;
     const char* port_str = extract_arg( &arg_handler, 'p' )->val.c;
     const bool listen_flag = extract_arg( &arg_handler, 's' )->val.b;
-    const bool tcp_flag = extract_arg( &arg_handler, 'u' )->val.b;
 
-    dd_create_socket(
-        &server_addr, ip_addr_str, port_str, listen_flag, tcp_flag );
+    dd_create_socket( &server_addr, ip_addr_str, port_str, listen_flag );
 
-    if( server_addr.socket_fd < 0 )
+#ifdef VERBOSE
+    dd_server_write_out(
+        DDLOG_WARN, "Timeout set to %.5f secs\n", (float)s_timeout_limit );
+#endif  // VERBOSE
+
+    if( server_addr.selected == NULL )
     {
         dd_server_write_out( DDLOG_ERROR, "Socket not created\n" );
         return 1;
     }
 
-    struct ev_loop* loop = EV_DEFAULT;
-
     if( listen_flag )
     {
-        // first watcher is always the primary one
-        struct ddIODataEV io_info = {
-            .socketfd = server_addr.socket_fd,
-            .io_flags = EV_WRITE,
-            .io_ptr = io_watchers,
-            .cb_func = io_callback,
-            .loop_ptr = loop,
-        };
+        struct ddLoop looper = dd_server_new_loop( read_cb, &server_addr );
 
-        dd_ev_io_watcher( &io_info );
+        dd_loop_add_timer( &looper, timer_cb, 0.1, true );
 
-        struct ddTimerDataEV timer_info = {
-            .interval = 0.1,
-            .timer_ptr = &timer_watcher,
-            .cb_func = timer_callback,
-            .loop_ptr = loop,
-            .repeat_flag = true,
-        };
-
-        dd_ev_timer_watcher( &timer_info );
-
-        struct ddSignalDataEV sig_info = {
-            .signal = SIGINT,
-            .signal_ptr = &sig_watcher,
-            .cb_func = sigint_callback,
-            .loop_ptr = loop,
-        };
-
-        dd_ev_signal_watcher( &sig_info );
-
-        ev_run( loop, 0 );
-    }
-    else
-    {
-        // parse message
+        dd_loop_run( &looper );
     }
 
     dd_close_socket( &server_addr.socket_fd );
-
-// if ( listen_flag ) // clean up accepted sockets
-
 #ifdef _WIN32
     void dd_server_cleanup_win32();
 #endif  // _WIN32
 
+#ifdef VERBOSE
+    dd_server_write_out( DDLOG_STATUS, "Closing server/client program\n" );
+#endif  // VERBOSE
+
     return 0;
 }
 
-static void io_callback( EV_P_ ev_io* io_w, int r_events )
+void read_cb( struct ddLoop* loop )
 {
-    UNUSED_VAR( loop );
-
-    if( r_events & EV_READ )
-    {
-        idle_time = 0.0;
-        dd_server_write_out( DDLOG_STATUS, "Got data\n" );
-    }
+    dd_server_write_out( DDLOG_STATUS, "Got data\n" );
 }
 
-static void timer_callback( struct ev_loop* t_loop,
-                            ev_timer* timer_w,
-                            int r_events )
+void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
 {
-    UNUSED_VAR( r_events );
+    s_timeout_limit -= nano_to_seconds( timer->tick_rate );
 
-    idle_time += timer_w->repeat;
-
-    if( idle_time > timeout_limit )
+    if( s_timeout_limit <= 1e-4 )
     {
-        dd_server_write_out( DDLOG_STATUS,
-                             "Timeout limit reached. Closing connection.\n" );
-        ev_break( t_loop, EVBREAK_ALL );
+        dd_server_write_out( DDLOG_WARN, "Timeout limit reached\n" );
+        dd_loop_break( loop );
     }
-}
-
-static void sigint_callback( struct ev_loop* sig_loop,
-                             ev_signal* sig_w,
-                             int r_events )
-{
-    UNUSED_VAR( r_events );
-    UNUSED_VAR( sig_w );
-
-    dd_server_write_out( DDLOG_WARNING, "FORCE_CLOSE. Closing connection.\n" );
-    ev_break( sig_loop, EVBREAK_ALL );
 }

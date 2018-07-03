@@ -1,24 +1,25 @@
-#ifdef __linux__
+#include "ddServer.h"
+
+#include "ddTime.h"
+
+#if DD_PLATFORM == DD_LINUX
 #include <unistd.h>
-#else
+#elif DD_PLATFORM == DD_WIN32
 #include <io.h>
-#endif  // __linux__
+#endif  // DD_PLATFORM
 
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 
-#include "ddServer.h"
-
-#ifdef _WIN32
+#if DD_PLATFORM == DD_WIN32
 static HANDLE s_hconsole;
 static WORD s_win23_red = FOREGROUND_RED | FOREGROUND_INTENSITY;
 static WORD s_win23_green = FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 static WORD s_win23_yellow =
     FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
-static WORD s_win23_white =
-    FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
-#endif  // _WIN32
+static WORD s_win23_white = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
+#endif  // DD_PLATFORM
 
 #ifndef ENUM_VAL
 #define ENUM_VAL( x ) 1 << x
@@ -39,7 +40,7 @@ static void set_output_color( uint8_t color )
 
     switch( color )
     {
-#ifdef _WIN32
+#if DD_PLATFORM == DD_WIN32
         case CONSOLE_R:
             SetConsoleTextAttribute( s_hconsole, s_win23_red );
             break;
@@ -51,7 +52,8 @@ static void set_output_color( uint8_t color )
             break;
         default:
             SetConsoleTextAttribute( s_hconsole, s_win23_white );
-#else
+            FlushConsoleInputBuffer( s_hconsole );
+#elif DD_PLATFORM == DD_LINUX
         case CONSOLE_R:
             fprintf( stdout, "\033[31;1;1m" );
             break;
@@ -63,12 +65,13 @@ static void set_output_color( uint8_t color )
             break;
         default:
             fprintf( stdout, "\033[0m" );
-#endif  // _WIN32
+            fflush( stdout );
+#endif  // DD_PLATFORM
             break;
     }
 }
 
-#ifdef _WIN32
+#if DD_PLATFORM == DD_WIN32
 
 void dd_server_init_win32()
 {
@@ -85,15 +88,15 @@ void dd_server_init_win32()
 }
 
 void dd_server_cleanup_win32() { WSACleanup(); }
-#endif  // _WIN32
+#endif  // DD_PLATFORM
 
-void dd_close_socket( int32_t* c_restrict socket )
+void dd_close_socket( ddSocket* c_restrict socket )
 {
-#ifdef EV_SELECT_IS_WINSOCKET
-    closesocket( _get_osfhandle( *socket ) );
-#else
+#if DD_PLATFORM == DD_WIN32
+    closesocket( *socket );
+#elif DD_PLATFORM == DD_LINUX
     close( *socket );
-#endif  // EV_SELECT_IS_WINSOCKET
+#endif  // DD_PLATFORM
 }
 
 void dd_server_write_out( const uint32_t log_type,
@@ -113,7 +116,7 @@ void dd_server_write_out( const uint32_t log_type,
             type = "error";
             color = CONSOLE_R;
             break;
-        case DDLOG_WARNING:
+        case DDLOG_WARN:
             type = "warning";
             color = CONSOLE_Y;
             break;
@@ -138,14 +141,13 @@ void dd_server_write_out( const uint32_t log_type,
 void dd_create_socket( struct ddAddressInfo* c_restrict address,
                        const char* c_restrict ip,
                        const char* c_restrict port,
-                       const bool create_server,
-                       const bool use_tcp )
+                       const bool create_server )
 {
     if( !address ) return;
 
     memset( &address->hints, 0, sizeof( address->hints ) );
     address->hints.ai_family = AF_UNSPEC;
-    address->hints.ai_socktype = use_tcp ? SOCK_STREAM : SOCK_DGRAM;
+    address->hints.ai_socktype = SOCK_DGRAM;
 
     address->status =
         getaddrinfo( ip, port, &address->hints, &address->options );
@@ -153,11 +155,10 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
 #ifdef VERBOSE
     char ip_str[INET6_ADDRSTRLEN];
 
-    dd_server_write_out(
-        DDLOG_STATUS, "Creating %s socket\n", use_tcp ? "TCP" : "UDP" );
+    dd_server_write_out( DDLOG_STATUS, "Creating UDP socket\n" );
 
     if( create_server )
-        dd_server_write_out( DDLOG_STATUS, "Creating server\n" );
+        dd_server_write_out( DDLOG_STATUS, "Attempting to create server\n" );
 
     dd_server_write_out( DDLOG_STATUS, "IP addresses for %s:\n", ip );
 #endif
@@ -195,32 +196,21 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
         dd_server_write_out( DDLOG_NOTAG, "\t%s: %s\n", ipver, ip_str );
 #endif
 
-        ddSocket socket_fd =
-#ifdef EV_USE_WSASOCKET
-            WSASocketW( next_ip->ai_family,
-                        next_ip->ai_socktype,
-                        next_ip->ai_protocol,
-                        0,
-                        0,
-                        0 );
-#else
-            socket( next_ip->ai_family,
-                    next_ip->ai_socktype,
-                    next_ip->ai_protocol );
-#endif
-#ifdef EV_SELECT_IS_WINSOCKET
-        address->socket_fd = _open_osfhandle( socket_fd, 0 );
-#else
-        address->socket_fd = socket_fd;
-#endif  // EV_SELECT_IS_WINSOCKET
+        ddSocket socket_fd = socket(
+            next_ip->ai_family, next_ip->ai_socktype, next_ip->ai_protocol );
+
+#if DD_PLATFORM == DD_LINUX
+        fcntl( socket_fd, F_SETFL, O_NONBLOCK );
+#endif  // DD_PLATFORM
 
         if( socket_fd == -1 )
         {
-            dd_server_write_out( DDLOG_WARNING,
+            dd_server_write_out( DDLOG_WARN,
                                  "Socket file descriptor creation error\n" );
             continue;
         }
 
+        address->socket_fd = socket_fd;
         address->selected = next_ip;
         break;
     }
@@ -234,14 +224,9 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
             dd_server_write_out( DDLOG_ERROR, "Server failed to bind\n" );
             return;
         }
-#ifdef EV_SELECT_IS_WINSOCKET
-        ddSocket socket_fd = _get_osfhandle( address->socket_fd );
-#else
-        ddSocket socket_fd = address->socket_fd;
-#endif  // EV_SELECT_IS_WINSOCKET
 
         int32_t yes = true;
-        if( setsockopt( socket_fd,
+        if( setsockopt( address->socket_fd,
                         SOL_SOCKET,
                         SO_REUSEADDR,
                         (const char*)&yes,
@@ -251,32 +236,16 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
             return;
         }
 
-        if( bind( socket_fd,
+        if( bind( address->socket_fd,
                   address->selected->ai_addr,
                   (int)address->selected->ai_addrlen ) == -1 )
         {
-#ifdef __linux__
-            close( address->socket_fd );
-#elif _WIN32
-            closesocket( socket_fd );
-#endif
+            dd_close_socket( &address->socket_fd );
+
             dd_server_write_out( DDLOG_ERROR, "Socket bind\n" );
             return;
         }
 
-        if( use_tcp )
-        {
-            if( listen( socket_fd, BACKLOG ) == -1 )
-            {
-                dd_server_write_out( DDLOG_ERROR,
-                                     "Server failed to listen on port\n" );
-                return;
-            }
-        }
-
-#ifdef __linux__
-        fcntl( address->socket_fd, F_SETFL, O_NONBLOCK );
-#endif  // __linux__
 #ifdef VERBOSE
         dd_server_write_out( DDLOG_STATUS, "Server waiting on data...\n" );
 #endif
@@ -285,41 +254,121 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
     return;
 }
 
-void dd_ev_io_watcher( struct ddIODataEV* c_restrict io_data )
-{
-    ev_io_init( io_data->io_ptr,
-                io_data->cb_func,
-                io_data->socketfd,
-                io_data->io_flags );
-
-    ev_io_start( io_data->loop_ptr, io_data->io_ptr );
-}
-
-void dd_ev_timer_watcher( struct ddTimerDataEV* c_restrict timer_data )
-{
-    if( timer_data->repeat_flag )
-    {
-        ev_init( timer_data->timer_ptr, timer_data->cb_func );
-
-        ( *timer_data->timer_ptr ).repeat = 0.1;  // second resolution
-
-        ev_timer_again( timer_data->loop_ptr, timer_data->timer_ptr );
-    }
-    else
-    {
-        //
-        return;
-    }
-}
-
-void dd_ev_signal_watcher( struct ddSignalDataEV* c_restrict signal_data )
-{
-    ev_signal_init(
-        signal_data->signal_ptr, signal_data->cb_func, signal_data->signal );
-    ev_signal_start( signal_data->loop_ptr, signal_data->signal_ptr );
-}
-
 void dd_server_send_msg( struct ddMsgData* c_restrict msg )
 {
-    //
+    UNUSED_VAR( msg );
+}
+
+struct ddLoop dd_server_new_loop( dd_loop_cb loop_cb,
+                                  struct ddAddressInfo* listener )
+{
+    return ( struct ddLoop ){
+        .start_time = 0,
+        .active_time = 0,
+        .timers_count = 0,
+        .listener = listener,
+        .callback = loop_cb,
+        .active = true,
+    };
+}
+
+void dd_loop_add_timer( struct ddLoop* c_restrict loop,
+                        dd_timer_cb timer_cb,
+                        double seconds,
+                        bool repeat )
+{
+    if( loop->timers_count >= MAX_ACTIVE_TIMERS )
+    {
+        dd_server_write_out( DDLOG_ERROR,
+                             "Loop timer limit reached. Abort add\n" );
+        return;
+    }
+
+    loop->timer_cbs[loop->timers_count] = timer_cb;
+
+    loop->timer_update[loop->timers_count] = 0;
+
+    loop->timers[loop->timers_count] = ( struct ddServerTimer ){
+        .tick_rate = seconds_to_nano( seconds ), .repeat = repeat,
+    };
+
+    loop->timers_count++;
+}
+
+int64_t dd_loop_time_nano( struct ddLoop* c_restrict loop )
+{
+    return loop->active_time - loop->start_time;
+}
+
+double dd_loop_time_seconds( struct ddLoop* c_restrict loop )
+{
+    return nano_to_seconds( loop->active_time - loop->start_time );
+}
+
+void dd_loop_break( struct ddLoop* loop ) { loop->active = false; }
+void dd_loop_run( struct ddLoop* loop )
+{
+    fd_set master;
+    fd_set read_fd;
+    FD_ZERO( &master );
+    FD_ZERO( &read_fd );
+
+    ddSocket fdmax = loop->listener->socket_fd;
+    FD_SET( fdmax, &master );
+
+    loop->start_time = loop->active_time = get_high_res_time();
+
+    for( uint32_t i = 0; i < loop->timers_count; i++ )
+        loop->timer_update[i] = loop->start_time;
+
+    struct timeval select_timeout = {
+        .tv_sec = 0, .tv_usec = 100,
+    };
+
+    while( loop->active )
+    {
+        read_fd = master;
+
+        if( select( fdmax + 1, &read_fd, NULL, NULL, &select_timeout ) == -1 )
+        {
+            dd_server_write_out( DDLOG_ERROR, "Select error\n" );
+            break;
+        }
+
+        // look for data
+        if( FD_ISSET( 0, &read_fd ) ) loop->callback( loop );
+
+        if( !loop->active ) return;
+
+        // check timers
+        uint32_t timer_idx = 0;
+        while( timer_idx < loop->timers_count )
+        {
+            const uint64_t delta =
+                loop->active_time - loop->timer_update[timer_idx];
+
+            struct ddServerTimer* timer = &loop->timers[timer_idx];
+
+            if( timer->tick_rate < delta )
+            {
+                loop->timer_cbs[timer_idx]( loop, timer );
+
+                if( !loop->active ) return;
+
+                if( timer->repeat )
+                    loop->timer_update[timer_idx] = loop->active_time;
+                else
+                {
+                    loop->timers_count--;
+
+                    loop->timers[timer_idx] = loop->timers[loop->timers_count];
+                    continue;
+                }
+            }
+
+            timer_idx++;
+        }
+
+        loop->active_time = get_high_res_time();
+    }
 }
