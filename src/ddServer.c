@@ -321,12 +321,13 @@ void dd_loop_run( struct ddLoop* loop )
     for( uint32_t i = 0; i < loop->timers_count; i++ )
         loop->timer_update[i] = loop->start_time;
 
-    struct timeval select_timeout = {
-        .tv_sec = 0, .tv_usec = 100,
-    };
-
     while( loop->active )
     {
+        // usec == 1e6 sec
+        struct timeval select_timeout = {
+            .tv_sec = 0, .tv_usec = 100,
+        };
+
         read_fd = master;
 
         if( select( fdmax + 1, &read_fd, NULL, NULL, &select_timeout ) == -1 )

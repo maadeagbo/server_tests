@@ -7,6 +7,7 @@
 
 static struct ddAddressInfo s_io_watchers[BACKLOG];
 
+static double s_time_tracker = 0.0;
 static double s_timeout_limit = 0.0;
 
 void read_cb( struct ddLoop* loop );
@@ -111,15 +112,19 @@ int main( int argc, char const* argv[] )
 void read_cb( struct ddLoop* loop )
 {
     dd_server_write_out( DDLOG_STATUS, "Got data\n" );
+
+    s_time_tracker = dd_loop_time_seconds( loop );
 }
 
 void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
 {
-    s_timeout_limit -= nano_to_seconds( timer->tick_rate );
+    double elapsed = dd_loop_time_seconds( loop ) - s_time_tracker;
 
-    if( s_timeout_limit <= 1e-4 )
+    if( elapsed > s_timeout_limit )
     {
-        dd_server_write_out( DDLOG_WARN, "Timeout limit reached\n" );
+        dd_server_write_out( DDLOG_WARN,
+                             "Timeout limit reached (time elapsed %.5f)\n",
+                             (float)elapsed );
         dd_loop_break( loop );
     }
 }
