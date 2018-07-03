@@ -155,7 +155,8 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
 #ifdef VERBOSE
     char ip_str[INET6_ADDRSTRLEN];
 
-    dd_server_write_out( DDLOG_STATUS, "Creating UDP socket\n" );
+    dd_server_write_out(
+        DDLOG_STATUS, "Creating UDP socket on port %s\n", port );
 
     if( create_server )
         dd_server_write_out( DDLOG_STATUS, "Attempting to create server\n" );
