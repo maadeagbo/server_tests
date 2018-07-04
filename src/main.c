@@ -96,6 +96,12 @@ int main( int argc, char const* argv[] )
 
         dd_loop_run( &looper );
     }
+	else
+	{
+		struct ddMsgVal msg = { .c = "Test msg" };
+
+        dd_server_send_msg( &server_addr, DDMSG_STR, &msg );
+	}
 
     dd_close_socket( &server_addr.socket_fd );
 #ifdef _WIN32

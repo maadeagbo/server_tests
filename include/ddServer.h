@@ -17,6 +17,15 @@
 #endif  // DD_PLATFORM
 
 #if DD_PLATFORM == DD_WIN32
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN 1
+#endif
+
+#pragma warning( push )
+#pragma warning( disable : 4201 )  // unnamed union
+#pragma warning( disable : 4204 )  // struct initializer
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #endif  // DD_PLATFORM
@@ -78,9 +87,9 @@ struct ddServerTimer
 
 struct ddLoop
 {
-    int64_t start_time;
-    int64_t active_time;
-    int32_t timers_count;
+    uint64_t start_time;
+    uint64_t active_time;
+    uint32_t timers_count;
 
     dd_loop_cb callback;
 
@@ -93,12 +102,30 @@ struct ddLoop
     bool active;
 };
 
-struct ddMsgData
+enum
 {
-    char msg[MAX_MSG_LENGTH];
-    char tag[MAX_TAG_LENGTH];
-    struct ddAddressInfo* recipient;
-    uint16_t msg_size;
+    DDMSG_FLOAT1 = ENUM_VAL( 0 ),
+    DDMSG_FLOAT2 = ENUM_VAL( 1 ),
+    DDMSG_FLOAT3 = ENUM_VAL( 2 ),
+    DDMSG_FLOAT4 = ENUM_VAL( 3 ),
+
+	DDMSG_INT1 = ENUM_VAL( 4 ),
+    DDMSG_INT2 = ENUM_VAL( 5 ),
+    DDMSG_INT3 = ENUM_VAL( 6 ),
+    DDMSG_INT4 = ENUM_VAL( 7 ),
+
+    DDMSG_STR = ENUM_VAL( 8 ),
+    DDMSG_BOOL = ENUM_VAL( 9 ),
+};
+
+struct ddMsgVal
+{
+    union {
+        float f[4];
+        int32_t i[4];
+        const char* c;
+        bool b;
+    };
 };
 
 void dd_server_init_win32();
@@ -116,7 +143,9 @@ void dd_server_write_out( const uint32_t log_type,
                           const char* c_restrict fmt_str,
                           ... );
 
-void dd_server_send_msg( struct ddMsgData* c_restrict msg );
+void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
+                         const uint32_t msg_type,
+                         const struct ddMsgVal* c_restrict msg );
 
 struct ddLoop dd_server_new_loop( dd_loop_cb loop_cb,
                                   struct ddAddressInfo* listener );

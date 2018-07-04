@@ -5,8 +5,9 @@
 #if DD_PLATFORM == DD_LINUX
 #include <time.h>
 #include <unistd.h>
-#include <x86intrin.h>
+//#include <x86intrin.h>
 
+/*
 static uint64_t RDTSC()
 {
     unsigned int hi, lo;
@@ -75,6 +76,8 @@ static uint64_t rdtsc_End()
     return ( (uint64_t)cycles_high << 32 ) | cycles_low;
 }
 
+*/
+
 uint64_t get_high_res_time()
 {
     uint64_t hrTime = 0;
@@ -85,6 +88,27 @@ uint64_t get_high_res_time()
 
     return hrTime;
 }
+#elif DD_PLATFORM == DD_WIN32
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN 1
+#endif
+
+#include <windows.h>
+#include <stdbool.h>
+
+// return cpu cycles
+uint64_t get_high_res_time()
+{
+    LARGE_INTEGER now, freq;
+    QueryPerformanceCounter( &now );
+    QueryPerformanceFrequency( &freq );
+
+    return ( (uint64_t)now.QuadPart * 1000000000LL ) /
+            (uint64_t)freq.QuadPart;
+}
+
+#endif  // DD_PLATFORM
 
 uint64_t seconds_to_nano( double seconds )
 {
@@ -102,67 +126,3 @@ double nano_to_seconds( uint64_t nanosecs )
 }
 
 uint64_t nano_to_milli( uint64_t nanosecs ) { return nanosecs / 1000000LL; }
-#elif DD_PLATFORM == DD_WIN32
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN 1
-#endif
-
-#include <windows.h>
-
-namespace ddTime
-{
-    // return cpu cycles
-    uint64_t GetHiResTime( const bool start_end )
-    {
-        LARGE_INTEGER now, freq;
-        QueryPerformanceCounter( &now );
-        QueryPerformanceFrequency( &freq );
-
-        return ( (uint64_t)now.QuadPart * 1000000000LL ) /
-               (uint64_t)freq.QuadPart;
-    }
-
-    // Put CPU to sleep
-    void sleep( float seconds )
-    {
-        // Sleep((DWORD)milliseconds);
-        std::this_thread::sleep_for(
-            std::chrono::duration<float, std::ratio<1, 1000> >( seconds ) );
-    }
-
-    // Convert positive floating point seconds to uint64 nanoseconds
-    uint64_t SecsToNanoSecs( float seconds )
-    {
-        POW2_VERIFY_MSG( seconds >= 0.0f, "Cannot convert negative float" );
-        float nanosecs = seconds * 1000000000.0f;
-        return (uint64_t)nanosecs;
-    }
-    // Converts uint64 nanoseconds to float seconds (WARNING: can overflow)
-    float NanoSecsToSecs( uint64_t nanosecs )
-    {
-        uint64_t tempMicro = nanosecs / 1000LL;
-        return (float)tempMicro / 1000000.0f;
-    }
-    // Converts uint64 nanoseconds to uint64_t milliseconds
-    uint64_t NanoSecsToMilli64( uint64_t nanosecs )
-    {
-        uint64_t tempMicro = nanosecs / 1000LL;
-        return tempMicro / 1000LL;
-    }
-}
-
-// ddTimer::ddTimer()
-//     : m_time_scale(1.0),
-//       m_time_sec(0.0f),
-//       m_avg_ft(0.f),
-//       m_is_paused(false),
-//       m_sethist(false),
-//       m_time_nano(0) {
-//   m_start_time = Timer::GetHiResTime();
-//   timeBeginPeriod(1);
-// }
-
-// ddTimer::~ddTimer() { timeEndPeriod(1); }
-
-#endif  // DD_PLATFORM
