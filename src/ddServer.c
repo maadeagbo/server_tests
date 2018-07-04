@@ -364,14 +364,16 @@ void dd_loop_run( struct ddLoop* loop )
 
         read_fd = master;
 
-        if( select( fdmax + 1, &read_fd, NULL, NULL, &select_timeout ) == -1 )
+        int32_t rc = select( fdmax + 1, &read_fd, NULL, NULL, &select_timeout );
+
+        if( rc == -1 )
         {
             dd_server_write_out( DDLOG_ERROR, "Select error\n" );
             break;
         }
 
         // look for data
-        if( FD_ISSET( 0, &read_fd ) ) loop->callback( loop );
+        if( rc == 1 ) loop->callback( loop );
 
         if( !loop->active ) return;
 
