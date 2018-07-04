@@ -104,8 +104,7 @@ uint64_t get_high_res_time()
     QueryPerformanceCounter( &now );
     QueryPerformanceFrequency( &freq );
 
-    return ( (uint64_t)now.QuadPart * 1000000000LL ) /
-            (uint64_t)freq.QuadPart;
+    return ( (uint64_t)now.QuadPart * 1000000000LL ) / (uint64_t)freq.QuadPart;
 }
 
 #endif  // DD_PLATFORM

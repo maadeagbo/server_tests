@@ -30,7 +30,7 @@ static WORD s_win23_white =
 enum
 {
     CONSOLE_R = ENUM_VAL( 0 ),
-    CONSOLE_Y = ENUM_VAL( 1 ), 
+    CONSOLE_Y = ENUM_VAL( 1 ),
     CONSOLE_G = ENUM_VAL( 2 ),
 };
 
@@ -220,8 +220,6 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
         break;
     }
 
-    freeaddrinfo( address->options );
-
     if( create_server )
     {
         if( address->selected == NULL )
@@ -251,6 +249,8 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
             return;
         }
 
+        freeaddrinfo( address->options );
+
 #ifdef VERBOSE
         dd_server_write_out( DDLOG_STATUS, "Server waiting on data...\n" );
 #endif
@@ -263,33 +263,34 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
                          const uint32_t msg_type,
                          const struct ddMsgVal* c_restrict msg )
 {
-	size_t msg_length = 0;
-	size_t bytes_sent = 0;
-	char output[MAX_MSG_LENGTH];
+    size_t msg_length = 0;
+    size_t bytes_sent = 0;
+    char output[MAX_MSG_LENGTH];
 
-	switch (msg_type)
-	{
-		case DDMSG_STR:
-			msg_length = strnlen( msg->c, MAX_MSG_LENGTH );
-			snprintf( output, msg_length, msg->c );
-			break;
-		default:
-			dd_server_write_out( DDLOG_ERROR, "Message type unrecognized\n" );
-			return;
-	}
+    switch( msg_type )
+    {
+        case DDMSG_STR:
+            msg_length = strnlen( msg->c, MAX_MSG_LENGTH );
+            snprintf( output, msg_length, "%s", msg->c );
+            break;
+        default:
+            dd_server_write_out( DDLOG_ERROR, "Message type unrecognized\n" );
+            return;
+    }
 
-	if( (bytes_sent = sendto( recipient->socket_fd, 
-							  output, 
-							  (int)msg_length, 
-							  0, 
-							  recipient->selected->ai_addr, 
-							  recipient->selected->ai_addrlen ) ) == -1 )
-	{
-		dd_server_write_out( DDLOG_ERROR, "sendto Failure\n" );
-		return;
-	}
+    if( ( bytes_sent = sendto( recipient->socket_fd,
+                               output,
+                               (int)msg_length,
+                               0,
+                               recipient->selected->ai_addr,
+                               recipient->selected->ai_addrlen ) ) == -1 )
+    {
+        dd_server_write_out( DDLOG_ERROR, "sendto Failure\n" );
+        return;
+    }
 
-	dd_server_write_out( DDLOG_NOTAG, "Sent %zuB out of %uB\n", bytes_sent, msg_length );
+    dd_server_write_out(
+        DDLOG_NOTAG, "Sent %zuB out of %uB\n", bytes_sent, msg_length );
 }
 
 struct ddLoop dd_server_new_loop( dd_loop_cb loop_cb,
@@ -346,7 +347,7 @@ void dd_loop_run( struct ddLoop* loop )
     FD_ZERO( &master );
     FD_ZERO( &read_fd );
 
-    int32_t fdmax = (int)loop->listener->socket_fd; // ignored on windows lol
+    int32_t fdmax = (int)loop->listener->socket_fd;  // ignored on windows lol
     FD_SET( fdmax, &master );
 
     loop->start_time = loop->active_time = get_high_res_time();
