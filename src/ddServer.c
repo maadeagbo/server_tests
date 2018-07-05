@@ -264,7 +264,7 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
                          const struct ddMsgVal* c_restrict msg )
 {
     size_t msg_length = 0;
-    size_t bytes_sent = 0;
+    ssize_t bytes_sent = 0;
     char output[MAX_MSG_LENGTH];
 
     switch( msg_type )
