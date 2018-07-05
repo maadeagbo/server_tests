@@ -50,10 +50,18 @@ int main( int argc, char const* argv[] )
         .short_id = 't',
         .default_val = {.f = 60.f}};
 
+	struct ddArgStat msg_arg = {
+		.description = "Sets msg to be sent over udp ( default : \"empty\" )",
+		.full_id = "msg",
+		.type_flag = ARG_STR,
+		.short_id = 'm',
+		.default_val = { .c = "empty" } };
+
     register_arg( &arg_handler, &ip_arg );
     register_arg( &arg_handler, &port_arg );
     register_arg( &arg_handler, &server_arg );
     register_arg( &arg_handler, &timeout_arg );
+    register_arg( &arg_handler, &msg_arg );
 
     poll_args( &arg_handler, argc, argv );
 
@@ -98,7 +106,7 @@ int main( int argc, char const* argv[] )
     }
     else
     {
-        struct ddMsgVal msg = {.c = "Test msg"};
+        struct ddMsgVal msg = {.c = extract_arg( &arg_handler, 'm' )->val.c };
 
         dd_server_send_msg( &server_addr, DDMSG_STR, &msg );
 
@@ -119,47 +127,18 @@ int main( int argc, char const* argv[] )
 
 void read_cb( struct ddLoop* loop )
 {
-    char buff[MAX_MSG_LENGTH];
-    struct sockaddr_storage sender = ( struct sockaddr_storage ){0};
-    socklen_t addr_len = sizeof( sender );
+	struct ddRecvMsg data = { .bytes_read = 0, };
 
-    ssize_t bytes_read = recvfrom( loop->listener->socket_fd,
-                                   buff,
-                                   MAX_MSG_LENGTH - 1,
-                                   0,
-                                   (struct sockaddr*)&sender,
-                                   &addr_len );
+	dd_server_recieve_msg( loop->listener, &data );
 
-    if( bytes_read == -1 )
-    {
-        dd_server_write_out( DDLOG_ERROR, "recvfrom Error\n" );
-        dd_loop_break( loop );
-        return;
-    }
+	if( data.bytes_read == -1 ) 
+		dd_loop_break( loop );
+	else
+	{
+		dd_server_write_out(DDLOG_NOTAG, "Data: %s\n", data.msg );
 
-#ifdef VERBOSE
-    char ip_str[INET6_ADDRSTRLEN];
-
-    struct sockaddr* sender_soc = (struct sockaddr*)&sender;
-    void* sender_addr = NULL;
-
-    if( sender_soc->sa_family == AF_INET )
-        sender_addr = &( ( (struct sockaddr_in*)sender_soc )->sin_addr );
-    else
-        sender_addr = &( ( (struct sockaddr_in6*)sender_soc )->sin6_addr );
-
-    dd_server_write_out( DDLOG_STATUS,
-                         "Recived %zdB packet from: %s\n",
-                         bytes_read,
-                         inet_ntop( sender.ss_family,
-                                    (struct sockaddr*)sender_addr,
-                                    ip_str,
-                                    sizeof( ip_str ) ) );
-#endif
-    buff[bytes_read] = '\0';
-    dd_server_write_out( DDLOG_NOTAG, "Data: %s\n", buff );
-
-    s_time_tracker = dd_loop_time_seconds( loop );
+		s_time_tracker = dd_loop_time_seconds(loop);
+	}
 }
 
 void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )

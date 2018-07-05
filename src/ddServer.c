@@ -264,7 +264,7 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
                          const struct ddMsgVal* c_restrict msg )
 {
     size_t msg_length = 0;
-    ssize_t bytes_sent = 0;
+    int32_t bytes_sent = 0;
     char output[MAX_MSG_LENGTH];
 
     switch( msg_type )
@@ -283,7 +283,7 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
                                (int)msg_length,
                                0,
                                recipient->selected->ai_addr,
-                               recipient->selected->ai_addrlen ) ) == -1 )
+                               (int)recipient->selected->ai_addrlen ) ) == -1 )
     {
         dd_server_write_out( DDLOG_ERROR, "sendto Failure\n" );
         return;
@@ -291,6 +291,48 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
 
     dd_server_write_out(
         DDLOG_NOTAG, "Sent %zuB out of %uB\n", bytes_sent, msg_length );
+}
+
+void dd_server_recieve_msg( const struct ddAddressInfo* c_restrict listener, 
+							struct ddRecvMsg* c_restrict msg_data )
+{
+	msg_data->sender = (struct sockaddr_storage) { 0 };
+	msg_data->addr_len = sizeof( msg_data->sender );
+
+	msg_data->bytes_read = recvfrom( listener->socket_fd,
+		msg_data->msg,
+		MAX_MSG_LENGTH - 1,
+		0,
+		(struct sockaddr*)&(msg_data->sender),
+		&(msg_data->addr_len));
+
+	if (msg_data->bytes_read == -1)
+	{
+		dd_server_write_out(DDLOG_ERROR, "recvfrom Error\n");
+		return;
+	}
+
+	msg_data->msg[msg_data->bytes_read] = '\0';
+
+#ifdef VERBOSE
+	char ip_str[INET6_ADDRSTRLEN];
+
+	struct sockaddr* sender_soc = (struct sockaddr*)&msg_data->sender;
+	void* sender_addr = NULL;
+
+	if (sender_soc->sa_family == AF_INET)
+		sender_addr = &(((struct sockaddr_in*)sender_soc)->sin_addr);
+	else
+		sender_addr = &(((struct sockaddr_in6*)sender_soc)->sin6_addr);
+
+	dd_server_write_out(DDLOG_STATUS,
+		"Recived %zdB packet from: %s\n",
+		msg_data->bytes_read,
+		inet_ntop(msg_data->sender.ss_family,
+		(struct sockaddr*)sender_addr,
+			ip_str,
+			sizeof(ip_str)));
+#endif
 }
 
 struct ddLoop dd_server_new_loop( dd_loop_cb loop_cb,

@@ -128,6 +128,14 @@ struct ddMsgVal
     };
 };
 
+struct ddRecvMsg
+{
+	char msg[MAX_MSG_LENGTH];
+	int32_t bytes_read;
+	struct sockaddr_storage sender;
+	socklen_t addr_len;
+};
+
 void dd_server_init_win32();
 
 void dd_server_cleanup_win32();
@@ -146,6 +154,9 @@ void dd_server_write_out( const uint32_t log_type,
 void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
                          const uint32_t msg_type,
                          const struct ddMsgVal* c_restrict msg );
+
+void dd_server_recieve_msg( const struct ddAddressInfo* c_restrict listener,
+							struct ddRecvMsg* c_restrict msg_data );
 
 struct ddLoop dd_server_new_loop( dd_loop_cb loop_cb,
                                   struct ddAddressInfo* listener );
