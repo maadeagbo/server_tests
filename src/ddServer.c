@@ -270,8 +270,8 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
     switch( msg_type )
     {
         case DDMSG_STR:
-            msg_length = strnlen( msg->c, MAX_MSG_LENGTH );
-            snprintf( output, msg_length, "%s", msg->c );
+            msg_length = strnlen( msg->c, MAX_MSG_LENGTH - 1 );
+            snprintf( output, msg_length + 1, "%s", msg->c );
             break;
         default:
             dd_server_write_out( DDLOG_ERROR, "Message type unrecognized\n" );
