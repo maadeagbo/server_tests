@@ -170,20 +170,9 @@ void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
 
         struct ddMsgVal msg = {.c = "Closing connection"};
 
-        struct addrinfo send = ( struct addrinfo ){0};
-
-        struct ddAddressInfo client_info = {
-            .socket_fd = loop->listener->socket_fd,
-        };
-        client_info.selected = &send;
-
         for( uint32_t i = 0; i < s_num_clients; i++ )
-        {
-            client_info.selected->ai_addr = (struct sockaddr*)&s_clients[i];
-            client_info.selected->ai_addrlen = sizeof( s_clients[i] );
-
-            dd_server_send_msg( &client_info, DDMSG_STR, &msg );
-        }
+            dd_server_send_msg( &s_clients[i], DDMSG_STR, &msg );
+        
         dd_loop_break( loop );
     }
 }
