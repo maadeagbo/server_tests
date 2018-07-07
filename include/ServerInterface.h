@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <errno.h>
 #if DD_PLATFORM == DD_LINUX
+#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netdb.h>
