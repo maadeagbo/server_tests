@@ -50,12 +50,12 @@ int main( int argc, char const* argv[] )
         .short_id = 't',
         .default_val = {.f = 60.f}};
 
-	struct ddArgStat msg_arg = {
-		.description = "Sets msg to be sent over udp ( default : \"empty\" )",
-		.full_id = "msg",
-		.type_flag = ARG_STR,
-		.short_id = 'm',
-		.default_val = { .c = "empty" } };
+    struct ddArgStat msg_arg = {
+        .description = "Sets msg to be sent over udp ( default : \"empty\" )",
+        .full_id = "msg",
+        .type_flag = ARG_STR,
+        .short_id = 'm',
+        .default_val = {.c = "empty"}};
 
     register_arg( &arg_handler, &ip_arg );
     register_arg( &arg_handler, &port_arg );
@@ -106,7 +106,7 @@ int main( int argc, char const* argv[] )
     }
     else
     {
-        struct ddMsgVal msg = {.c = extract_arg( &arg_handler, 'm' )->val.c };
+        struct ddMsgVal msg = {.c = extract_arg( &arg_handler, 'm' )->val.c};
 
         dd_server_send_msg( &server_addr, DDMSG_STR, &msg );
 
@@ -127,18 +127,20 @@ int main( int argc, char const* argv[] )
 
 void read_cb( struct ddLoop* loop )
 {
-	struct ddRecvMsg data = { .bytes_read = 0, };
+    struct ddRecvMsg data = {
+        .bytes_read = 0,
+    };
 
-	dd_server_recieve_msg( loop->listener, &data );
+    dd_server_recieve_msg( loop->listener, &data );
 
-	if( data.bytes_read == -1 ) 
-		dd_loop_break( loop );
-	else
-	{
-		dd_server_write_out(DDLOG_NOTAG, "Data: %s\n", data.msg );
+    if( data.bytes_read == -1 )
+        dd_loop_break( loop );
+    else
+    {
+        dd_server_write_out( DDLOG_NOTAG, "Data: %s\n", data.msg );
 
-		s_time_tracker = dd_loop_time_seconds(loop);
-	}
+        s_time_tracker = dd_loop_time_seconds( loop );
+    }
 }
 
 void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )

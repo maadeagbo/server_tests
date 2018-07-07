@@ -293,45 +293,45 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
         DDLOG_NOTAG, "Sent %zuB out of %uB\n", bytes_sent, msg_length );
 }
 
-void dd_server_recieve_msg( const struct ddAddressInfo* c_restrict listener, 
-							struct ddRecvMsg* c_restrict msg_data )
+void dd_server_recieve_msg( const struct ddAddressInfo* c_restrict listener,
+                            struct ddRecvMsg* c_restrict msg_data )
 {
-	msg_data->sender = (struct sockaddr_storage) { 0 };
-	msg_data->addr_len = sizeof( msg_data->sender );
+    msg_data->sender = ( struct sockaddr_storage ){0};
+    msg_data->addr_len = sizeof( msg_data->sender );
 
-	msg_data->bytes_read = recvfrom( listener->socket_fd,
-		msg_data->msg,
-		MAX_MSG_LENGTH - 1,
-		0,
-		(struct sockaddr*)&(msg_data->sender),
-		&(msg_data->addr_len));
+    msg_data->bytes_read = recvfrom( listener->socket_fd,
+                                     msg_data->msg,
+                                     MAX_MSG_LENGTH - 1,
+                                     0,
+                                     (struct sockaddr*)&( msg_data->sender ),
+                                     &( msg_data->addr_len ) );
 
-	if (msg_data->bytes_read == -1)
-	{
-		dd_server_write_out(DDLOG_ERROR, "recvfrom Error\n");
-		return;
-	}
+    if( msg_data->bytes_read == -1 )
+    {
+        dd_server_write_out( DDLOG_ERROR, "recvfrom Error\n" );
+        return;
+    }
 
-	msg_data->msg[msg_data->bytes_read] = '\0';
+    msg_data->msg[msg_data->bytes_read] = '\0';
 
 #ifdef VERBOSE
-	char ip_str[INET6_ADDRSTRLEN];
+    char ip_str[INET6_ADDRSTRLEN];
 
-	struct sockaddr* sender_soc = (struct sockaddr*)&msg_data->sender;
-	void* sender_addr = NULL;
+    struct sockaddr* sender_soc = (struct sockaddr*)&msg_data->sender;
+    void* sender_addr = NULL;
 
-	if (sender_soc->sa_family == AF_INET)
-		sender_addr = &(((struct sockaddr_in*)sender_soc)->sin_addr);
-	else
-		sender_addr = &(((struct sockaddr_in6*)sender_soc)->sin6_addr);
+    if( sender_soc->sa_family == AF_INET )
+        sender_addr = &( ( (struct sockaddr_in*)sender_soc )->sin_addr );
+    else
+        sender_addr = &( ( (struct sockaddr_in6*)sender_soc )->sin6_addr );
 
-	dd_server_write_out(DDLOG_STATUS,
-		"Recived %zdB packet from: %s\n",
-		msg_data->bytes_read,
-		inet_ntop(msg_data->sender.ss_family,
-		(struct sockaddr*)sender_addr,
-			ip_str,
-			sizeof(ip_str)));
+    dd_server_write_out( DDLOG_STATUS,
+                         "Recived %zdB packet from: %s\n",
+                         msg_data->bytes_read,
+                         inet_ntop( msg_data->sender.ss_family,
+                                    (struct sockaddr*)sender_addr,
+                                    ip_str,
+                                    sizeof( ip_str ) ) );
 #endif
 }
 
