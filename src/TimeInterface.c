@@ -1,4 +1,4 @@
-#include "ddTime.h"
+#include "TimeInterface.h"
 
 #include <assert.h>
 

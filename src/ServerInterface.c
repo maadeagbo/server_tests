@@ -1,6 +1,6 @@
-#include "ddServer.h"
-
-#include "ddTime.h"
+#include "ServerInterface.h"
+#include "ConsoleWrite.h"
+#include "TimeInterface.h"
 
 #if DD_PLATFORM == DD_LINUX
 #include <unistd.h>
@@ -14,66 +14,6 @@
 #include <stdarg.h>
 
 #if DD_PLATFORM == DD_WIN32
-static HANDLE s_hconsole;
-static WORD s_win23_red = FOREGROUND_RED | FOREGROUND_INTENSITY;
-static WORD s_win23_green = FOREGROUND_GREEN | FOREGROUND_INTENSITY;
-static WORD s_win23_yellow =
-    FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
-static WORD s_win23_white =
-    FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY;
-#endif  // DD_PLATFORM
-
-#ifndef ENUM_VAL
-#define ENUM_VAL( x ) 1 << x
-#endif  // !ENUM_VAL
-
-enum
-{
-    CONSOLE_R = ENUM_VAL( 0 ),
-    CONSOLE_Y = ENUM_VAL( 1 ),
-    CONSOLE_G = ENUM_VAL( 2 ),
-};
-
-#undef ENUM_VAL
-
-static void set_output_color( uint8_t color )
-{
-    // FlushConsoleInputBuffer( s_hconsole );
-
-    switch( color )
-    {
-#if DD_PLATFORM == DD_WIN32
-        case CONSOLE_R:
-            SetConsoleTextAttribute( s_hconsole, s_win23_red );
-            break;
-        case CONSOLE_Y:
-            SetConsoleTextAttribute( s_hconsole, s_win23_yellow );
-            break;
-        case CONSOLE_G:
-            SetConsoleTextAttribute( s_hconsole, s_win23_green );
-            break;
-        default:
-            SetConsoleTextAttribute( s_hconsole, s_win23_white );
-            FlushConsoleInputBuffer( s_hconsole );
-#elif DD_PLATFORM == DD_LINUX
-        case CONSOLE_R:
-            fprintf( stdout, "\033[31;1;1m" );
-            break;
-        case CONSOLE_Y:
-            fprintf( stdout, "\033[33;1;1m" );
-            break;
-        case CONSOLE_G:
-            fprintf( stdout, "\033[32;1;1m" );
-            break;
-        default:
-            fprintf( stdout, "\033[0m" );
-            fflush( stdout );
-#endif  // DD_PLATFORM
-            break;
-    }
-}
-
-#if DD_PLATFORM == DD_WIN32
 
 void dd_server_init_win32()
 {
@@ -81,8 +21,7 @@ void dd_server_init_win32()
 
     if( WSAStartup( MAKEWORD( 2, 0 ), &wsaData ) != 0 )
     {
-        dd_server_write_out( DDLOG_ERROR,
-                             "Failed to initialize Win32 WSADATA\n" );
+        console_write( LOG_ERROR, "Failed to initialize Win32 WSADATA\n" );
         exit( 1 );
     }
 
@@ -99,47 +38,6 @@ void dd_close_socket( ddSocket* c_restrict socket )
 #elif DD_PLATFORM == DD_LINUX
     close( *socket );
 #endif  // DD_PLATFORM
-}
-
-void dd_server_write_out( const uint32_t log_type,
-                          const char* c_restrict fmt_str,
-                          ... )
-{
-    FILE* file = stdout;
-    const char* type = 0;
-    uint8_t color = 0;
-
-    set_output_color( 0 );
-
-    switch( log_type )
-    {
-        case DDLOG_STATUS:
-            type = "status";
-            break;
-        case DDLOG_ERROR:
-            type = "error";
-            color = CONSOLE_R;
-            break;
-        case DDLOG_WARN:
-            type = "warning";
-            color = CONSOLE_Y;
-            break;
-        case DDLOG_NOTAG:
-            type = " ";
-        default:
-            type = " ";
-            break;
-    }
-    fprintf( file, "[%10s] ", type );
-    set_output_color( color );
-
-    va_list args;
-
-    va_start( args, fmt_str );
-    vfprintf( file, fmt_str, args );
-    va_end( args );
-
-    set_output_color( 0 );
 }
 
 void dd_create_socket( struct ddAddressInfo* c_restrict address,
@@ -159,19 +57,18 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
 #ifdef VERBOSE
     char ip_str[INET6_ADDRSTRLEN];
 
-    dd_server_write_out(
-        DDLOG_STATUS, "Creating UDP socket on port %s\n", port );
+    console_write( LOG_STATUS, "Creating UDP socket on port %s\n", port );
 
     if( create_server )
-        dd_server_write_out( DDLOG_STATUS, "Attempting to create server\n" );
+        console_write( LOG_STATUS, "Attempting to create server\n" );
 
-    dd_server_write_out( DDLOG_STATUS, "IP addresses for %s:\n", ip );
+    console_write( LOG_STATUS, "IP addresses for %s:\n", ip );
 #endif
 
     if( address->status != 0 )
     {
-        dd_server_write_out(
-            DDLOG_ERROR, "getaddrinfo %s\n", gai_strerror( address->status ) );
+        console_write(
+            LOG_ERROR, "getaddrinfo %s\n", gai_strerror( address->status ) );
         return;
     }
 
@@ -198,7 +95,7 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
 
         inet_ntop( next_ip->ai_family, addr, ip_str, sizeof( ip_str ) );
 
-        dd_server_write_out( DDLOG_NOTAG, "\t%s: %s\n", ipver, ip_str );
+        console_write( LOG_NOTAG, "\t%s: %s\n", ipver, ip_str );
 #endif
 
         ddSocket socket_fd = socket(
@@ -210,8 +107,8 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
 
         if( socket_fd == -1 )
         {
-            dd_server_write_out( DDLOG_WARN,
-                                 "Socket file descriptor creation error\n" );
+            console_write( LOG_WARN,
+                           "Socket file descriptor creation error\n" );
             continue;
         }
 
@@ -224,7 +121,7 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
     {
         if( address->selected == NULL )
         {
-            dd_server_write_out( DDLOG_ERROR, "Server failed to bind\n" );
+            console_write( LOG_ERROR, "Server failed to bind\n" );
             return;
         }
 
@@ -235,7 +132,7 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
                         (const char*)&yes,
                         sizeof( int32_t ) ) == -1 )
         {
-            dd_server_write_out( DDLOG_ERROR, "Socket port reuse\n" );
+            console_write( LOG_ERROR, "Socket port reuse\n" );
             return;
         }
 
@@ -245,14 +142,14 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
         {
             dd_close_socket( &address->socket_fd );
 
-            dd_server_write_out( DDLOG_ERROR, "Socket bind\n" );
+            console_write( LOG_ERROR, "Socket bind\n" );
             return;
         }
 
         freeaddrinfo( address->options );
 
 #ifdef VERBOSE
-        dd_server_write_out( DDLOG_STATUS, "Server waiting on data...\n" );
+        console_write( LOG_STATUS, "Server waiting on data...\n" );
 #endif
     }
 
@@ -274,7 +171,7 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
             snprintf( output, msg_length + 1, "%s", msg->c );
             break;
         default:
-            dd_server_write_out( DDLOG_ERROR, "Message type unrecognized\n" );
+            console_write( LOG_ERROR, "Message type unrecognized\n" );
             return;
     }
 
@@ -285,12 +182,12 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
                                recipient->selected->ai_addr,
                                (int)recipient->selected->ai_addrlen ) ) == -1 )
     {
-        dd_server_write_out( DDLOG_ERROR, "sendto Failure\n" );
+        console_write( LOG_ERROR, "sendto Failure\n" );
         return;
     }
 
-    dd_server_write_out(
-        DDLOG_NOTAG, "Sent %zuB out of %uB\n", bytes_sent, msg_length );
+    console_write(
+        LOG_NOTAG, "Sent %zuB out of %uB\n", bytes_sent, msg_length );
 }
 
 void dd_server_recieve_msg( const struct ddAddressInfo* c_restrict listener,
@@ -308,7 +205,7 @@ void dd_server_recieve_msg( const struct ddAddressInfo* c_restrict listener,
 
     if( msg_data->bytes_read == -1 )
     {
-        dd_server_write_out( DDLOG_ERROR, "recvfrom Error\n" );
+        console_write( LOG_ERROR, "recvfrom Error\n" );
         return;
     }
 
@@ -325,13 +222,13 @@ void dd_server_recieve_msg( const struct ddAddressInfo* c_restrict listener,
     else
         sender_addr = &( ( (struct sockaddr_in6*)sender_soc )->sin6_addr );
 
-    dd_server_write_out( DDLOG_STATUS,
-                         "Recived %zdB packet from: %s\n",
-                         msg_data->bytes_read,
-                         inet_ntop( msg_data->sender.ss_family,
-                                    (struct sockaddr*)sender_addr,
-                                    ip_str,
-                                    sizeof( ip_str ) ) );
+    console_write( LOG_STATUS,
+                   "Recived %zdB packet from: %s\n",
+                   msg_data->bytes_read,
+                   inet_ntop( msg_data->sender.ss_family,
+                              (struct sockaddr*)sender_addr,
+                              ip_str,
+                              sizeof( ip_str ) ) );
 #endif
 }
 
@@ -355,8 +252,7 @@ void dd_loop_add_timer( struct ddLoop* c_restrict loop,
 {
     if( loop->timers_count >= MAX_ACTIVE_TIMERS )
     {
-        dd_server_write_out( DDLOG_ERROR,
-                             "Loop timer limit reached. Abort add\n" );
+        console_write( LOG_ERROR, "Loop timer limit reached. Abort add\n" );
         return;
     }
 
@@ -410,7 +306,7 @@ void dd_loop_run( struct ddLoop* loop )
 
         if( rc == -1 )
         {
-            dd_server_write_out( DDLOG_ERROR, "Select error\n" );
+            console_write( LOG_ERROR, "Select error\n" );
             break;
         }
 

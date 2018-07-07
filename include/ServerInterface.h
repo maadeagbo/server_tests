@@ -56,14 +56,6 @@
 #define ddSocket SOCKET
 #endif  // DD_PLATFORM
 
-enum
-{
-    DDLOG_STATUS = ENUM_VAL( 0 ),
-    DDLOG_ERROR = ENUM_VAL( 1 ),
-    DDLOG_WARN = ENUM_VAL( 2 ),
-    DDLOG_NOTAG = ENUM_VAL( 3 ),
-};
-
 struct ddLoop;
 struct ddServerTimer;
 
@@ -146,10 +138,6 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
                        const char* c_restrict ip,
                        const char* c_restrict port,
                        const bool create_server );
-
-void dd_server_write_out( const uint32_t log_type,
-                          const char* c_restrict fmt_str,
-                          ... );
 
 void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
                          const uint32_t msg_type,

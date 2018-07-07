@@ -1,11 +1,13 @@
 #include <stdio.h>
 
 #include "ddConfig.h"
-#include "ddArgHandler.h"
-#include "ddServer.h"
-#include "ddTime.h"
+#include "ArgHandler.h"
+#include "ConsoleWrite.h"
+#include "ServerInterface.h"
+#include "TimeInterface.h"
 
-static struct ddAddressInfo s_io_watchers[BACKLOG];
+static struct sockaddr_storage s_clients[BACKLOG];
+static uint32_t s_num_clients;
 
 static double s_time_tracker = 0.0;
 static double s_timeout_limit = 0.0;
@@ -15,8 +17,6 @@ void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer );
 
 int main( int argc, char const* argv[] )
 {
-    UNUSED_VAR( s_io_watchers );
-
     struct ddArgHandler arg_handler;
 
     init_arg_handler( &arg_handler,
@@ -86,13 +86,13 @@ int main( int argc, char const* argv[] )
     dd_create_socket( &server_addr, ip_addr_str, port_str, listen_flag );
 
 #ifdef VERBOSE
-    dd_server_write_out(
-        DDLOG_WARN, "Timeout set to %.5f secs\n", (float)s_timeout_limit );
+    console_write(
+        LOG_WARN, "Timeout set to %.5f secs\n", (float)s_timeout_limit );
 #endif  // VERBOSE
 
     if( server_addr.selected == NULL )
     {
-        dd_server_write_out( DDLOG_ERROR, "Socket not created\n" );
+        console_write( LOG_ERROR, "Socket not created\n" );
         return 1;
     }
 
@@ -119,7 +119,7 @@ int main( int argc, char const* argv[] )
 #endif  // _WIN32
 
 #ifdef VERBOSE
-    dd_server_write_out( DDLOG_STATUS, "Closing server/client program\n" );
+    console_write( LOG_STATUS, "Closing server/client program\n" );
 #endif  // VERBOSE
 
     return 0;
@@ -137,7 +137,13 @@ void read_cb( struct ddLoop* loop )
         dd_loop_break( loop );
     else
     {
-        dd_server_write_out( DDLOG_NOTAG, "Data: %s\n", data.msg );
+        if( s_num_clients < BACKLOG )
+        {
+            s_clients[s_num_clients] = data.sender;
+            s_num_clients++;
+        }
+
+        console_write( LOG_NOTAG, "Data: %s\n", data.msg );
 
         s_time_tracker = dd_loop_time_seconds( loop );
     }
@@ -149,9 +155,9 @@ void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
 
     if( elapsed > s_timeout_limit )
     {
-        dd_server_write_out( DDLOG_WARN,
-                             "Timeout limit reached (time elapsed %.5f)\n",
-                             (float)elapsed );
+        console_write( LOG_WARN,
+                       "Timeout limit reached (time elapsed %.5f)\n",
+                       (float)elapsed );
         dd_loop_break( loop );
     }
 }

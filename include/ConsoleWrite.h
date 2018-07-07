@@ -5,16 +5,14 @@
 
 #if DD_PLATFORM == DD_WIN32
 
-const WORD console_color[] = 
-{
+static const WORD console_color[] = {
 #define CONSOLE_ENUM( a, b, c, d ) d,
 #include "ConsoleEnums.inl"
 };
 
 #elif DD_PLATFORM == DD_LINUX
 
-const char* const console_color[] = 
-{
+static const char* const console_color[] = {
 #define CONSOLE_ENUM( a, b, c, d ) c,
 #include "ConsoleEnums.inl"
 };
@@ -27,9 +25,8 @@ enum
 #include "ConsoleEnums.inl"
 };
 
-const char* const console_header[] = 
-{
-#define CONSOLE_ENUM( a, b, c, d ) a,
+static const char* const console_header[] = {
+#define CONSOLE_ENUM( a, b, c, d ) b,
 #include "ConsoleEnums.inl"
 };
 

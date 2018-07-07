@@ -106,15 +106,17 @@ configure_file (
 
 set( HEADERS 
 	"${PROJECT_SOURCE_DIR}/include/ddConfig.h"
-	"${PROJECT_SOURCE_DIR}/include/ddArgHandler.h"
-	"${PROJECT_SOURCE_DIR}/include/ddServer.h"
-	"${PROJECT_SOURCE_DIR}/include/ddTime.h"
+	"${PROJECT_SOURCE_DIR}/include/ConsoleWrite.h"
+	"${PROJECT_SOURCE_DIR}/include/ArgHandler.h"
+	"${PROJECT_SOURCE_DIR}/include/ServerInterface.h"
+	"${PROJECT_SOURCE_DIR}/include/TimeInterface.h"
 )
 
 set( SOURCES
-	"${PROJECT_SOURCE_DIR}/src/ddArgHandler.c"
-	"${PROJECT_SOURCE_DIR}/src/ddServer.c"
-	"${PROJECT_SOURCE_DIR}/src/ddTime.c"
+	"${PROJECT_SOURCE_DIR}/src/ArgHandler.c"
+	"${PROJECT_SOURCE_DIR}/src/ConsoleWrite.c"
+	"${PROJECT_SOURCE_DIR}/src/ServerInterface.c"
+	"${PROJECT_SOURCE_DIR}/src/TimeInterface.c"
 	"${PROJECT_SOURCE_DIR}/src/main.c"
 )
 
