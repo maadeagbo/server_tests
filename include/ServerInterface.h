@@ -141,15 +141,15 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
                        const bool create_server );
 
 bool dd_create_socket2( struct ddAddressInfo* c_restrict address,
-                        struct sockaddr_storage* const c_restrict client,
-                        const char* const c_restrict port );
+                        struct sockaddr_storage* client,
+                        const uint32_t port );
 
 void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
                          const uint32_t msg_type,
                          const struct ddMsgVal* c_restrict msg );
 
 void dd_server_recieve_msg( const struct ddAddressInfo* c_restrict listener,
-                            struct ddRecvMsg* c_restrict msg_data );
+                            struct ddRecvMsg* msg_data );
 
 struct ddLoop dd_server_new_loop( dd_loop_cb loop_cb,
                                   struct ddAddressInfo* listener );

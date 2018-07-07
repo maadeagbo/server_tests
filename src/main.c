@@ -141,11 +141,9 @@ void read_cb( struct ddLoop* loop )
     {
         if( s_num_clients < BACKLOG )
         {
-            char p_str[10];
-            snprintf( p_str, sizeof( p_str ), "%d", loop->listener->port_num );
-
-            const bool success = dd_create_socket2(
-                &s_clients[s_num_clients], &data.sender, p_str );
+            const bool success = dd_create_socket2( &s_clients[s_num_clients],
+                                                    &data.sender,
+                                                    loop->listener->port_num );
 
             if( success ) s_num_clients++;
         }
@@ -172,7 +170,7 @@ void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
 
         for( uint32_t i = 0; i < s_num_clients; i++ )
             dd_server_send_msg( &s_clients[i], DDMSG_STR, &msg );
-        
+
         dd_loop_break( loop );
     }
 }

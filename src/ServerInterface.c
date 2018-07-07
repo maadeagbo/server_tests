@@ -170,20 +170,26 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
 }
 
 bool dd_create_socket2( struct ddAddressInfo* c_restrict address,
-                        struct sockaddr_storage* c_restrict client,
-                        const char* c_restrict port )
+                        struct sockaddr_storage* client,
+                        const uint32_t port )
 {
-    void* addr;
+    char port_str[10];
+    snprintf( port_str, sizeof( port_str ), "%d", port );
+
     char ip_str[INET6_ADDRSTRLEN];
 
-    if( client->ss_family == AF_INET )
-        addr = &( (struct sockaddr_in*)&client )->sin_addr;  // IPv4
+    struct sockaddr* client_soc = (struct sockaddr*)client;
+    void* addr = NULL;
+
+    if( client_soc->sa_family == AF_INET )
+        addr = &( (struct sockaddr_in*)client_soc )->sin_addr;  // IPv4
     else
-        addr = &( (struct sockaddr_in6*)&client )->sin6_addr;  // IPv6
+        addr = &( (struct sockaddr_in6*)client_soc )->sin6_addr;  // IPv6
 
-    inet_ntop( client->ss_family, addr, ip_str, sizeof( ip_str ) );
+    inet_ntop(
+        client->ss_family, (struct sockaddr*)addr, ip_str, sizeof( ip_str ) );
 
-    return create_socket_base( address, ip_str, port );
+    return create_socket_base( address, ip_str, port_str );
 }
 
 void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
@@ -216,12 +222,30 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
         return;
     }
 
-    console_write(
-        LOG_NOTAG, "Sent %zuB out of %uB\n", bytes_sent, msg_length );
+#ifdef VERBOSE
+    void* addr;
+    struct addrinfo* recvr = recipient->selected;
+    char ip_str[INET6_ADDRSTRLEN];
+
+    if( recvr->ai_family == AF_INET )
+        addr = &( ( (struct sockaddr_in*)&recvr )->sin_addr );  // IPv4
+    else
+        addr = &( ( (struct sockaddr_in6*)&recvr )->sin6_addr );  // IPv6
+
+    inet_ntop(
+        recvr->ai_family, (struct sockaddr*)addr, ip_str, sizeof( ip_str ) );
+
+    console_write( LOG_NOTAG,
+                   "Sent %zuB out of %uB to %s on port %u\n",
+                   bytes_sent,
+                   msg_length,
+                   ip_str,
+                   recipient->port_num );
+#endif
 }
 
 void dd_server_recieve_msg( const struct ddAddressInfo* c_restrict listener,
-                            struct ddRecvMsg* c_restrict msg_data )
+                            struct ddRecvMsg* msg_data )
 {
     msg_data->sender = ( struct sockaddr_storage ){0};
     msg_data->addr_len = sizeof( msg_data->sender );
