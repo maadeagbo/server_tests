@@ -4,6 +4,9 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
+#if DD_PLATFORM == DD_WIN32
+static HANDLE s_hconsole;
+#endif
 static FILE* s_logfile = 0;
 static bool s_log_set = false;
 
@@ -20,7 +23,12 @@ static void set_output_color( uint8_t color, const bool flush )
 
 void console_set_output_log( const char* c_restrict file_location )
 {
+
+#if DD_PLATFORM == DD_WIN32
+    fopen_s( &s_logfile, file_location, "w" );
+#else
     s_logfile = fopen( file_location, "w" );
+#endif
     if( s_logfile )
     {
         s_log_set = true;
@@ -36,6 +44,9 @@ void console_write( const uint32_t log_type,
 {
     if( !s_log_set )
     {
+#if DD_PLATFORM == DD_WIN32
+		s_hconsole = GetStdHandle( STD_OUTPUT_HANDLE );
+#endif
         s_logfile = stdout;
         s_log_set = true;
     }
@@ -43,7 +54,7 @@ void console_write( const uint32_t log_type,
     set_output_color( 0, false );
 
     fprintf( s_logfile, "[%10s] ", console_header[log_type] );
-    set_output_color( log_type, false );
+    set_output_color( (uint8_t)log_type, false );
 
     va_list args;
 

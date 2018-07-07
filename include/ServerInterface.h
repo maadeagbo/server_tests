@@ -18,10 +18,6 @@
 
 #if DD_PLATFORM == DD_WIN32
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN 1
-#endif
-
 #pragma warning( push )
 #pragma warning( disable : 4201 )  // unnamed union
 #pragma warning( disable : 4204 )  // struct initializer

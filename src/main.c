@@ -151,6 +151,8 @@ void read_cb( struct ddLoop* loop )
 
 void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
 {
+	UNUSED_VAR( timer );
+
     double elapsed = dd_loop_time_seconds( loop ) - s_time_tracker;
 
     if( elapsed > s_timeout_limit )
@@ -158,6 +160,23 @@ void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
         console_write( LOG_WARN,
                        "Timeout limit reached (time elapsed %.5f)\n",
                        (float)elapsed );
+		
+		struct ddMsgVal msg = { .c = "Closing connection" };
+
+		struct addrinfo send = (struct addrinfo){0};
+
+		struct ddAddressInfo client_info = {
+			.socket_fd = loop->listener->socket_fd,
+		};
+		client_info.selected = &send;
+
+		for (uint32_t i = 0; i < s_num_clients; i++)
+		{
+			client_info.selected->ai_addr = (struct sockaddr*)&s_clients[i];
+			client_info.selected->ai_addrlen = sizeof( s_clients[i] );
+
+			dd_server_send_msg( &client_info, DDMSG_STR, &msg);
+		}
         dd_loop_break( loop );
     }
 }

@@ -23,6 +23,7 @@
 
 #ifdef _WIN32
 #define DD_PLATFORM DD_WIN32
+#define WIN32_LEAN_AND_MEAN 1
 #elif __linux__
 #define DD_PLATFORM DD_LINUX
 #endif

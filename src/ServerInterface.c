@@ -2,12 +2,6 @@
 #include "ConsoleWrite.h"
 #include "TimeInterface.h"
 
-#if DD_PLATFORM == DD_LINUX
-#include <unistd.h>
-#elif DD_PLATFORM == DD_WIN32
-#include <io.h>
-#endif  // DD_PLATFORM
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,8 +18,6 @@ void dd_server_init_win32()
         console_write( LOG_ERROR, "Failed to initialize Win32 WSADATA\n" );
         exit( 1 );
     }
-
-    s_hconsole = GetStdHandle( STD_OUTPUT_HANDLE );
 }
 
 void dd_server_cleanup_win32() { WSACleanup(); }
