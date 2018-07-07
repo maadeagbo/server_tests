@@ -32,12 +32,18 @@ void dd_close_socket( ddSocket* c_restrict socket )
 #endif  // DD_PLATFORM
 }
 
-void dd_create_socket( struct ddAddressInfo* c_restrict address,
-                       const char* c_restrict ip,
-                       const char* c_restrict port,
-                       const bool create_server )
+void dd_close_clients( struct ddAddressInfo clients[c_restrict],
+                       const uint32_t count )
 {
-    if( !address ) return;
+    for( uint32_t i = 0; i < count; i++ )
+        dd_close_socket( &clients[i].socket_fd );
+}
+
+static bool create_socket_base( struct ddAddressInfo* c_restrict address,
+                                const char* const c_restrict ip,
+                                const char* const c_restrict port )
+{
+    if( !address || !ip || !port ) return false;
 
     memset( &address->hints, 0, sizeof( address->hints ) );
     address->hints.ai_family = AF_UNSPEC;
@@ -51,9 +57,6 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
 
     console_write( LOG_STATUS, "Creating UDP socket on port %s\n", port );
 
-    if( create_server )
-        console_write( LOG_STATUS, "Attempting to create server\n" );
-
     console_write( LOG_STATUS, "IP addresses for %s:\n", ip );
 #endif
 
@@ -61,8 +64,10 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
     {
         console_write(
             LOG_ERROR, "getaddrinfo %s\n", gai_strerror( address->status ) );
-        return;
+        return false;
     }
+
+    address->port_num = strtol( port, NULL, 10 );
 
     // find useable soscket for port
     for( struct addrinfo* next_ip = address->options; next_ip != NULL;
@@ -106,11 +111,27 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
 
         address->socket_fd = socket_fd;
         address->selected = next_ip;
-        break;
+
+        return true;
     }
+    return false;
+}
+
+void dd_create_socket( struct ddAddressInfo* c_restrict address,
+                       const char* const c_restrict ip,
+                       const char* const c_restrict port,
+                       const bool create_server )
+{
+    const bool success = create_socket_base( address, ip, port );
+
+    if( !success ) return;
 
     if( create_server )
     {
+#ifdef VERBOSE
+        console_write( LOG_STATUS, "Attempting to create server\n" );
+#endif  // VERBOSE
+
         if( address->selected == NULL )
         {
             console_write( LOG_ERROR, "Server failed to bind\n" );
@@ -146,6 +167,23 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
     }
 
     return;
+}
+
+bool dd_create_socket2( struct ddAddressInfo* c_restrict address,
+                        struct sockaddr_storage* c_restrict client,
+                        const char* c_restrict port )
+{
+    void* addr;
+    char ip_str[INET6_ADDRSTRLEN];
+
+    if( client->ss_family == AF_INET )
+        addr = &( (struct sockaddr_in*)&client )->sin_addr;  // IPv4
+    else
+        addr = &( (struct sockaddr_in6*)&client )->sin6_addr;  // IPv6
+
+    inet_ntop( client->ss_family, addr, ip_str, sizeof( ip_str ) );
+
+    return create_socket_base( address, ip_str, port );
 }
 
 void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,

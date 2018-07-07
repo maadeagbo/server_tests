@@ -6,7 +6,7 @@
 #include "ServerInterface.h"
 #include "TimeInterface.h"
 
-static struct sockaddr_storage s_clients[BACKLOG];
+static struct ddAddressInfo s_clients[BACKLOG];
 static uint32_t s_num_clients;
 
 static double s_time_tracker = 0.0;
@@ -114,6 +114,8 @@ int main( int argc, char const* argv[] )
     }
 
     dd_close_socket( &server_addr.socket_fd );
+
+    dd_close_clients( s_clients, s_num_clients );
 #ifdef _WIN32
     void dd_server_cleanup_win32();
 #endif  // _WIN32
@@ -139,8 +141,13 @@ void read_cb( struct ddLoop* loop )
     {
         if( s_num_clients < BACKLOG )
         {
-            s_clients[s_num_clients] = data.sender;
-            s_num_clients++;
+            char p_str[10];
+            snprintf( p_str, sizeof( p_str ), "%d", loop->listener->port_num );
+
+            const bool success = dd_create_socket2(
+                &s_clients[s_num_clients], &data.sender, p_str );
+
+            if( success ) s_num_clients++;
         }
 
         console_write( LOG_NOTAG, "Data: %s\n", data.msg );
@@ -151,7 +158,7 @@ void read_cb( struct ddLoop* loop )
 
 void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
 {
-	UNUSED_VAR( timer );
+    UNUSED_VAR( timer );
 
     double elapsed = dd_loop_time_seconds( loop ) - s_time_tracker;
 
@@ -160,23 +167,23 @@ void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
         console_write( LOG_WARN,
                        "Timeout limit reached (time elapsed %.5f)\n",
                        (float)elapsed );
-		
-		struct ddMsgVal msg = { .c = "Closing connection" };
 
-		struct addrinfo send = (struct addrinfo){0};
+        struct ddMsgVal msg = {.c = "Closing connection"};
 
-		struct ddAddressInfo client_info = {
-			.socket_fd = loop->listener->socket_fd,
-		};
-		client_info.selected = &send;
+        struct addrinfo send = ( struct addrinfo ){0};
 
-		for (uint32_t i = 0; i < s_num_clients; i++)
-		{
-			client_info.selected->ai_addr = (struct sockaddr*)&s_clients[i];
-			client_info.selected->ai_addrlen = sizeof( s_clients[i] );
+        struct ddAddressInfo client_info = {
+            .socket_fd = loop->listener->socket_fd,
+        };
+        client_info.selected = &send;
 
-			dd_server_send_msg( &client_info, DDMSG_STR, &msg);
-		}
+        for( uint32_t i = 0; i < s_num_clients; i++ )
+        {
+            client_info.selected->ai_addr = (struct sockaddr*)&s_clients[i];
+            client_info.selected->ai_addrlen = sizeof( s_clients[i] );
+
+            dd_server_send_msg( &client_info, DDMSG_STR, &msg );
+        }
         dd_loop_break( loop );
     }
 }

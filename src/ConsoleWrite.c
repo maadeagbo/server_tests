@@ -23,7 +23,6 @@ static void set_output_color( uint8_t color, const bool flush )
 
 void console_set_output_log( const char* c_restrict file_location )
 {
-
 #if DD_PLATFORM == DD_WIN32
     fopen_s( &s_logfile, file_location, "w" );
 #else
@@ -45,7 +44,7 @@ void console_write( const uint32_t log_type,
     if( !s_log_set )
     {
 #if DD_PLATFORM == DD_WIN32
-		s_hconsole = GetStdHandle( STD_OUTPUT_HANDLE );
+        s_hconsole = GetStdHandle( STD_OUTPUT_HANDLE );
 #endif
         s_logfile = stdout;
         s_log_set = true;

@@ -65,6 +65,7 @@ struct ddAddressInfo
     struct addrinfo* options;
     struct addrinfo* selected;
     int32_t status;
+    int32_t port_num;
     ddSocket socket_fd;
 };
 
@@ -131,10 +132,17 @@ void dd_server_cleanup_win32();
 
 void dd_close_socket( ddSocket* c_restrict socket );
 
+void dd_close_clients( struct ddAddressInfo clients[c_restrict],
+                       const uint32_t count );
+
 void dd_create_socket( struct ddAddressInfo* c_restrict address,
-                       const char* c_restrict ip,
-                       const char* c_restrict port,
+                       const char* const c_restrict ip,
+                       const char* const c_restrict port,
                        const bool create_server );
+
+bool dd_create_socket2( struct ddAddressInfo* c_restrict address,
+                        struct sockaddr_storage* const c_restrict client,
+                        const char* const c_restrict port );
 
 void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
                          const uint32_t msg_type,
