@@ -116,8 +116,6 @@ static void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
 {
     UNUSED_VAR( timer );
 
-    console_collect_stdin();
-    
     if( strcmp( input_msg, "exit" ) == 0 ) 
         dd_loop_break( loop );
 

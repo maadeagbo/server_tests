@@ -11,13 +11,31 @@ static HANDLE s_hconsole;
 #else // DD_PLATFORM == DD_LINUX
 #include <fcntl.h>
 #include <unistd.h>
+#include <termios.h>
+
+static struct termios t;
+
+static void unbuffer_stdin()
+{
+    tcgetattr( STDIN_FILENO, &t ); //get the current terminal I/O structure
+    t.c_lflag &= ~ICANON; //Manipulate the flag bits to do what you want it to do
+    tcsetattr( STDIN_FILENO, TCSANOW, &t ); //Apply the new settings
+}
+
+static void buffer_stdin()
+{
+    tcgetattr( STDIN_FILENO, &t ); //get the current terminal I/O structure
+    t.c_lflag |= ICANON; //Manipulate the flag bits to do what you want it to do
+    tcsetattr( STDIN_FILENO, TCSANOW, &t ); //Apply the new settings
+}
+
 #endif // DD_PLATFORM
 
 static FILE* s_logfile = 0;
 static bool s_log_set = false;
 
 #define IN_BUFF_SIZE 1024
-static char input_buffer[BUFSIZ];
+static char input_buffer[IN_BUFF_SIZE];
 static char saved_input[IN_BUFF_SIZE];
 static bool collect_stdin_flag = false;
 
@@ -36,13 +54,15 @@ void console_collect_stdin()
 {
     if( !collect_stdin_flag )
     {
-        setbuf( stdin, input_buffer ); // turn off buffering for stdin
-        fcntl( 0, F_SETFL, O_NONBLOCK ); // make stdin non-blocking
+        //etbuf( stdin, input_buffer ); // turn off buffering for stdin
+        fcntl( STDIN_FILENO, F_SETFL, O_NONBLOCK ); // make stdin non-blocking
+
+#if DD_PLATFORM == DD_LINUX
+        unbuffer_stdin();
+#endif // DD_PLATFORM == DD_LINUX
 
         collect_stdin_flag = true;
     }
-
-    fgets( saved_input, IN_BUFF_SIZE, stdin );
 }
 
 void console_set_output_log( const char* c_restrict file_location )
@@ -77,15 +97,19 @@ void console_write( const uint32_t log_type,
     if( collect_stdin_flag )
     {
         //fgets( input_buffer, IN_BUFF_SIZE, stdin );
-        input_buffer[0] = '\0';
         char* ch = input_buffer;
         
-        while( read(STDIN_FILENO, ch, 1) > 0 )
+        while( ( *ch = getchar() ) != '\n' && *ch != EOF )
         {
             ch++;
             if( ch == (input_buffer + (IN_BUFF_SIZE - 1) ) ) break;
         }
-        *ch = '\0';
+
+        if( ch != input_buffer )
+        {
+            *ch = '\0';
+            snprintf( saved_input, IN_BUFF_SIZE, "%s", input_buffer );
+        }
         
         printf(" ");
     }
@@ -103,8 +127,9 @@ void console_write( const uint32_t log_type,
 
     set_output_color( 0, true );
 
-    if( collect_stdin_flag && *input_buffer )
+    if( collect_stdin_flag && *saved_input )
     {
-        write( STDIN_FILENO, input_buffer, strlen( input_buffer ) );
+        write( STDIN_FILENO, saved_input, strlen( input_buffer ) );
+        input_buffer[0] = '\0';
     }
 }
