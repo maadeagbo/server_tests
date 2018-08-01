@@ -117,7 +117,7 @@ set( SOURCES
 	"${PROJECT_SOURCE_DIR}/src/ConsoleWrite.c"
 	"${PROJECT_SOURCE_DIR}/src/ServerInterface.c"
 	"${PROJECT_SOURCE_DIR}/src/TimeInterface.c"
-	"${PROJECT_SOURCE_DIR}/src/main.c"
+	"${PROJECT_SOURCE_DIR}/src/example_02.c"
 )
 
 ###########################################################################
@@ -170,8 +170,8 @@ endif(USE_CLANG)
 # build a CPack driven installer package
 include (InstallRequiredSystemLibraries)
 #set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/License.txt")
-set (CPACK_PACKAGE_VERSION_MAJOR "${CODE_CLEANUP_VERSION_MAJOR}")
-set (CPACK_PACKAGE_VERSION_MINOR "${CODE_CLEANUP_VERSION_MINOR}")
+set (CPACK_PACKAGE_VERSION_MAJOR "${Server_Tests_VERSION_MAJOR}")
+set (CPACK_PACKAGE_VERSION_MINOR "${Server_Tests_VERSION_MINOR}")
 include (CPack)
 
 ###########################################################################

@@ -228,9 +228,9 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
     char ip_str[INET6_ADDRSTRLEN];
 
     if( recvr->ai_family == AF_INET )
-        addr = &( ( (struct sockaddr_in*)&recvr )->sin_addr );  // IPv4
+        addr = &( ( (struct sockaddr_in*)recvr )->sin_addr );  // IPv4
     else
-        addr = &( ( (struct sockaddr_in6*)&recvr )->sin6_addr );  // IPv6
+        addr = &( ( (struct sockaddr_in6*)recvr )->sin6_addr );  // IPv6
 
     inet_ntop(
         recvr->ai_family, (struct sockaddr*)addr, ip_str, sizeof( ip_str ) );

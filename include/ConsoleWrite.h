@@ -32,6 +32,8 @@ static const char* const console_header[] = {
 #include "ConsoleEnums.inl"
 };
 
+void console_collect_stdin();
+
 void console_set_output_log( const char* c_restrict file_location );
 
 void console_write( const uint32_t log_type,

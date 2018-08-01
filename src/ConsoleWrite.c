@@ -3,12 +3,23 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if DD_PLATFORM == DD_WIN32
 static HANDLE s_hconsole;
-#endif
+#else // DD_PLATFORM == DD_LINUX
+#include <fcntl.h>
+#include <unistd.h>
+#endif // DD_PLATFORM
+
 static FILE* s_logfile = 0;
 static bool s_log_set = false;
+
+#define IN_BUFF_SIZE 1024
+static char input_buffer[BUFSIZ];
+static char saved_input[IN_BUFF_SIZE];
+static bool collect_stdin_flag = false;
 
 static void set_output_color( uint8_t color, const bool flush )
 {
@@ -19,6 +30,19 @@ static void set_output_color( uint8_t color, const bool flush )
     fprintf( stdout, "%s", console_color[color] );
     if( flush ) fflush( stdout );
 #endif  // DD_PLATFORM
+}
+
+void console_collect_stdin()
+{
+    if( !collect_stdin_flag )
+    {
+        setbuf( stdin, input_buffer ); // turn off buffering for stdin
+        fcntl( 0, F_SETFL, O_NONBLOCK ); // make stdin non-blocking
+
+        collect_stdin_flag = true;
+    }
+
+    fgets( saved_input, IN_BUFF_SIZE, stdin );
 }
 
 void console_set_output_log( const char* c_restrict file_location )
@@ -50,9 +74,25 @@ void console_write( const uint32_t log_type,
         s_log_set = true;
     }
 
+    if( collect_stdin_flag )
+    {
+        //fgets( input_buffer, IN_BUFF_SIZE, stdin );
+        input_buffer[0] = '\0';
+        char* ch = input_buffer;
+        
+        while( read(STDIN_FILENO, ch, 1) > 0 )
+        {
+            ch++;
+            if( ch == (input_buffer + (IN_BUFF_SIZE - 1) ) ) break;
+        }
+        *ch = '\0';
+        
+        printf(" ");
+    }
+
     set_output_color( 0, false );
 
-    fprintf( s_logfile, "[%10s] ", console_header[log_type] );
+    fprintf( s_logfile, "\r[%10s] ", console_header[log_type] );
     set_output_color( (uint8_t)log_type, false );
 
     va_list args;
@@ -62,4 +102,9 @@ void console_write( const uint32_t log_type,
     va_end( args );
 
     set_output_color( 0, true );
+
+    if( collect_stdin_flag && *input_buffer )
+    {
+        write( STDIN_FILENO, input_buffer, strlen( input_buffer ) );
+    }
 }
