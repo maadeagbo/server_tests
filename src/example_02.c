@@ -42,7 +42,7 @@ int main( int argc, char const* argv[] )
     register_arg( &arg_handler, &port_arg );
 
     poll_args( &arg_handler, argc, argv );
-    
+
     if( extract_arg( &arg_handler, 'h' )->val.b )
     {
         print_arg_help_msg( &arg_handler );
@@ -83,7 +83,7 @@ int main( int argc, char const* argv[] )
 #ifdef VERBOSE
     console_write( LOG_STATUS, "Closing server/client program\n" );
 #endif  // VERBOSE
-    
+
     return 0;
 }
 
@@ -116,8 +116,7 @@ static void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
 {
     UNUSED_VAR( timer );
 
-    if( strcmp( input_msg, "exit" ) == 0 ) 
-        dd_loop_break( loop );
+    if( strcmp( input_msg, "exit" ) == 0 ) dd_loop_break( loop );
 
     // if( elapsed > s_timeout_limit )
     // {
