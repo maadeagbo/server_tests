@@ -7,7 +7,11 @@
 #include "ServerInterface.h"
 #include "TimeInterface.h"
 
+#define IP_LENGTH INET6_ADDRSTRLEN
+
 static struct ddAddressInfo s_clients[BACKLOG];
+static char s_client_ips[BACKLOG][IP_LENGTH];
+static char s_client_ports[BACKLOG][10];
 static uint32_t s_num_clients;
 
 static void read_cb( struct ddLoop* loop );
@@ -102,11 +106,10 @@ static void read_cb( struct ddLoop* loop )
             const bool success = dd_create_socket2( &s_clients[s_num_clients],
                                                     &data.sender,
                                                     loop->listener->port_num );
-
             if( success ) s_num_clients++;
         }
 
-        console_write( LOG_NOTAG, "Data: %s\n", data.msg );
+        console_write( LOG_NOTAG, "Data recieved: %s\n", data.msg );
     }
 }
 
@@ -118,8 +121,38 @@ static void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
 
     if( *input_msg )
     {
-        if( strcmp( input_msg, "exit" ) == 0 )
-            dd_loop_break( loop );
+        if( strcmp( input_msg, "exit" ) == 0 ) dd_loop_break( loop );
+        // process new address
+        else if( input_msg[0] == '@' )
+        {
+            char* port_ptr = strchr( input_msg + 1, '#' );
+
+            if( port_ptr )
+            {
+                const size_t ip_len = port_ptr - input_msg;
+
+                snprintf( s_client_ips[s_num_clients],
+                          ip_len < IP_LENGTH ? ip_len : IP_LENGTH,
+                          "%s",
+                          input_msg + 1 );
+                snprintf(
+                    s_client_ports[s_num_clients], 10, "%s", port_ptr + 1 );
+
+                dd_create_socket( &s_clients[s_num_clients],
+                                  s_client_ips[s_num_clients],
+                                  s_client_ports[s_num_clients],
+                                  false );
+
+                if( s_clients[s_num_clients].selected == NULL )
+                    console_write(
+                        LOG_ERROR,
+                        "Connection un-established-> IP: %s PORT: %s\n",
+                        s_client_ips[s_num_clients],
+                        s_client_ports[s_num_clients] );
+                else
+                    s_num_clients++;
+            }
+        }
         else
         {
             struct ddMsgVal msg = {

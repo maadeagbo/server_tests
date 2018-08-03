@@ -42,6 +42,7 @@ static void buffer_stdin()
 static struct sigaction sig_restore_term;
 
 static FILE* s_logfile = 0;
+static FILE* s_oldCmds = 0;
 static bool s_log_set = false;
 
 #define IN_BUFF_SIZE 1024
@@ -57,8 +58,12 @@ static uint32_t s_buffered_str_len;
 static char s_final_buff[IN_BUFF_SIZE];
 static bool s_collect_stdin_flag = false;
 
-static void sig_handler( int sig ) { buffer_stdin(); }
-//
+static void sig_handler( int sig )
+{
+    buffer_stdin();
+    fclose( s_oldCmds );
+}
+
 static void set_output_color( uint8_t color, const bool flush )
 {
 #if DD_PLATFORM == DD_WIN32
@@ -88,17 +93,41 @@ void console_collect_stdin()
         sigaction( SIGINT, &sig_restore_term, NULL );
 
         fcntl( STDIN_FILENO, F_SETFL, O_NONBLOCK );  // make stdin non-blocking
-
         unbuffer_stdin();
 
-        s_collect_stdin_flag = true;
-
         s_buffered_str = s_buffered_history;
+
+        s_oldCmds = fopen( "server_input.log", "a+" );
+
+        if( s_oldCmds )
+        {
+            while( fgets( s_buffered_str, IN_BUFF_SIZE, s_oldCmds ) )
+            {
+                const size_t cmd_length = strlen( s_buffered_str );
+
+                if( cmd_length <= 1 ) continue;
+
+                s_buffered_str[cmd_length - 1] = '\0';  // erase newline
+
+                // update history
+                s_history_tail = ( s_history_tail + 1 ) % BUFF_HISTORY_SIZE;
+
+                s_buffered_str =
+                    s_buffered_history + ( s_history_tail * IN_BUFF_SIZE );
+                s_buffered_str_len = 0;
+                s_buffered_str[0] = '\0';
+
+                if( s_history_head == s_history_tail )
+                    s_history_head = ( s_history_head + 1 ) % BUFF_HISTORY_SIZE;
+            }
+        }
+
+        s_collect_stdin_flag = true;
     }
 
-    char ch;
+    int ch;
 
-    while( ( ch = getchar() ) != (uint32_t)EOF )
+    while( ( ch = getchar() ) != EOF )
     {
         // handle backspace key
         if( ch == 0x7f )
@@ -146,6 +175,9 @@ void console_collect_stdin()
 
             if( s_history_head == s_history_tail )
                 s_history_head = ( s_history_head + 1 ) % BUFF_HISTORY_SIZE;
+
+            // update input log if possible
+            if( s_oldCmds ) fprintf( s_oldCmds, "%s\n", s_final_buff );
         }
         // handle up key
         else if( ch == 0x41 )
