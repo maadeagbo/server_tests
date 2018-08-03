@@ -82,7 +82,7 @@ int main( int argc, char const* argv[] )
     dd_close_socket( &server_addr.socket_fd );
     dd_close_clients( s_clients, s_num_clients );
 
-#ifdef DD_PLATFORM == DD_WIN32
+#if DD_PLATFORM == DD_WIN32
     void dd_server_cleanup_win32();
 #endif  // DD_PLATFORM == DD_WIN32
 
