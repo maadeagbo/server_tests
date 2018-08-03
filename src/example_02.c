@@ -17,8 +17,6 @@ static char input_msg[MAX_MSG_LENGTH];
 
 int main( int argc, char const* argv[] )
 {
-    console_collect_stdin();
-
     struct ddArgHandler arg_handler;
 
     init_arg_handler( &arg_handler,
@@ -116,19 +114,22 @@ static void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
 {
     UNUSED_VAR( timer );
 
-    if( strcmp( input_msg, "exit" ) == 0 ) dd_loop_break( loop );
+    query_input( input_msg, MAX_MSG_LENGTH );
 
-    // if( elapsed > s_timeout_limit )
-    // {
-    //     console_write( LOG_WARN,
-    //                    "Timeout limit reached (time elapsed %.5f)\n",
-    //                    (float)elapsed );
+    if( *input_msg )
+    {
+        if( strcmp( input_msg, "exit" ) == 0 )
+            dd_loop_break( loop );
+        else
+        {
+            struct ddMsgVal msg = {
+                .c = input_msg,
+            };
 
-    //     struct ddMsgVal msg = {.c = "Closing connection"};
+            for( uint32_t i = 0; i < s_num_clients; i++ )
+                dd_server_send_msg( &s_clients[i], DDMSG_STR, &msg );
 
-    //     for( uint32_t i = 0; i < s_num_clients; i++ )
-    //         dd_server_send_msg( &s_clients[i], DDMSG_STR, &msg );
-
-    //     dd_loop_break( loop );
-    // }
+            input_msg[0] = '\0';
+        }
+    }
 }

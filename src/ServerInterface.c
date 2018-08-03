@@ -331,7 +331,12 @@ double dd_loop_time_seconds( struct ddLoop* c_restrict loop )
     return nano_to_seconds( loop->active_time - loop->start_time );
 }
 
-void dd_loop_break( struct ddLoop* loop ) { loop->active = false; }
+void dd_loop_break( struct ddLoop* loop )
+{
+    loop->active = false;
+    console_restore_stdin();
+}
+
 void dd_loop_run( struct ddLoop* loop )
 {
     fd_set master;
@@ -349,9 +354,11 @@ void dd_loop_run( struct ddLoop* loop )
 
     while( loop->active )
     {
-        // usec == 1e6 sec
+        console_collect_stdin();
+
+        // usec == 1e-6 sec
         struct timeval select_timeout = {
-            .tv_sec = 0, .tv_usec = 100,
+            .tv_sec = 0, .tv_usec = 1000,
         };
 
         read_fd = master;

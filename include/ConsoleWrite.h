@@ -34,6 +34,10 @@ static const char* const console_header[] = {
 
 void console_collect_stdin();
 
+void console_restore_stdin();
+
+void query_input( char* copy_to_buffer, const uint32_t copy_to_buffer_size );
+
 void console_set_output_log( const char* c_restrict file_location );
 
 void console_write( const uint32_t log_type,
