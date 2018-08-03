@@ -98,7 +98,7 @@ void console_collect_stdin()
 
     char ch;
 
-    while( ( ch = getchar() ) != EOF )
+    while( ( ch = getchar() ) != (uint32_t)EOF )
     {
         // handle backspace key
         if( ch == 0x7f )
