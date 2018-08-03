@@ -132,7 +132,7 @@ void dd_server_cleanup_win32();
 
 void dd_close_socket( ddSocket* c_restrict socket );
 
-void dd_close_clients( struct ddAddressInfo clients[c_restrict],
+void dd_close_clients( struct ddAddressInfo* c_restrict clients,
                        const uint32_t count );
 
 void dd_create_socket( struct ddAddressInfo* c_restrict address,
