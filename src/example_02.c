@@ -101,7 +101,7 @@ static void read_cb( struct ddLoop* loop )
         dd_loop_break( loop );
     else
     {
-        if( s_num_clients < BACKLOG )
+        if( s_num_clients == 0 )
         {
             const bool success = dd_create_socket2( &s_clients[s_num_clients],
                                                     &data.sender,
