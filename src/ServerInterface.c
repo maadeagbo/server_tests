@@ -11,7 +11,7 @@
 
 void dd_server_init_win32()
 {
-	// windows server api requires initialization
+    // windows server api requires initialization
     WSADATA wsaData;
 
     if( WSAStartup( MAKEWORD( 2, 0 ), &wsaData ) != 0 )
@@ -21,10 +21,10 @@ void dd_server_init_win32()
     }
 }
 
-void dd_server_cleanup_win32() 
+void dd_server_cleanup_win32()
 {
-	// windows server api requires cleanup
-	WSACleanup(); 
+    // windows server api requires cleanup
+    WSACleanup();
 }
 
 #endif  // DD_PLATFORM
@@ -51,7 +51,7 @@ static bool create_socket_base( struct ddAddressInfo* c_restrict address,
 {
     if( !address || !ip || !port ) return false;
 
-	// udp-type socket struct
+    // udp-type socket struct
     memset( &address->hints, 0, sizeof( address->hints ) );
     address->hints.ai_family = AF_UNSPEC;
     address->hints.ai_socktype = SOCK_DGRAM;
@@ -74,7 +74,7 @@ static bool create_socket_base( struct ddAddressInfo* c_restrict address,
         return false;
     }
 
-	// find useable socket for port
+    // find useable socket for port
     address->port_num = strtol( port, NULL, 10 );
 
     for( struct addrinfo* next_ip = address->options; next_ip != NULL;
@@ -101,13 +101,13 @@ static bool create_socket_base( struct ddAddressInfo* c_restrict address,
 
         console_write( LOG_NOTAG, "\t%s: %s\n", ipver, ip_str );
 #endif
-		// create socket
+        // create socket
         ddSocket socket_fd = socket(
             next_ip->ai_family, next_ip->ai_socktype, next_ip->ai_protocol );
 
 #if DD_PLATFORM == DD_LINUX
-        fcntl( socket_fd, F_SETFL, O_NONBLOCK ); // make non-blocking
-#endif  // DD_PLATFORM
+        fcntl( socket_fd, F_SETFL, O_NONBLOCK );  // make non-blocking
+#endif                                            // DD_PLATFORM
 
         if( socket_fd == -1 )
         {
@@ -116,9 +116,9 @@ static bool create_socket_base( struct ddAddressInfo* c_restrict address,
             continue;
         }
 
-		// set return socket
+        // set return socket
         address->socket_fd = socket_fd;
-        address->selected = next_ip; // can be deleted if socket_fd is copied
+        address->selected = next_ip;  // can be deleted if socket_fd is copied
 
         return true;
     }
@@ -146,7 +146,7 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
             return;
         }
 
-		// free port if blocked from use
+        // free port if blocked from use
         int32_t yes = true;
         if( setsockopt( address->socket_fd,
                         SOL_SOCKET,
@@ -158,7 +158,7 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
             return;
         }
 
-		// bind socket to port
+        // bind socket to port
         if( bind( address->socket_fd,
                   address->selected->ai_addr,
                   (int)address->selected->ai_addrlen ) == -1 )
@@ -183,7 +183,7 @@ bool dd_create_socket2( struct ddAddressInfo* c_restrict address,
                         struct sockaddr_storage* client,
                         const uint32_t port )
 {
-	// convert port and ip address to string format for socket creation
+    // convert port and ip address to string format for socket creation
     char port_str[10];
     snprintf( port_str, sizeof( port_str ), "%d", port );
 
@@ -211,7 +211,7 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
     int32_t bytes_sent = 0;
     char output[MAX_MSG_LENGTH];
 
-	// format message for compression (if implemented)
+    // format message for compression (if implemented)
     switch( msg_type )
     {
         case DDMSG_STR:
@@ -397,7 +397,7 @@ void dd_loop_run( struct ddLoop* loop )
 
             struct ddServerTimer* timer = &loop->timers[timer_idx];
 
-			// update timers
+            // update timers
             if( timer->tick_rate < delta )
             {
                 loop->timer_cbs[timer_idx]( loop, timer );

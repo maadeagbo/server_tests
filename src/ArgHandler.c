@@ -60,28 +60,28 @@ void poll_args( struct ddArgHandler* c_restrict handler,
         const char* next_arg = argv[i];
         if( *next_arg == '-' )
         {
-            curr_arg = NULL; // used if current argument has modifier/input
+            curr_arg = NULL;  // used if current argument has modifier/input
             next_arg++;
 
-            if( *next_arg == '-' ) // long-form argument
+            if( *next_arg == '-' )  // long-form argument
             {
                 next_arg++;
                 for( uint32_t j = 0; j < handler->args_count; j++ )
                     if( strcmp( next_arg, handler->long_id[j] ) == 0 )
                     {
                         curr_arg = &handler->args[j];
-                        set_arg( curr_arg, "1" ); // defaults boolean to true
+                        set_arg( curr_arg, "1" );  // defaults boolean to true
                         break;
                     }
             }
-            else // short-form argument
+            else  // short-form argument
                 while( *next_arg )
                 {
                     for( uint32_t j = 0; j < handler->args_count; j++ )
                         if( *next_arg == handler->short_id[j] )
                         {
                             curr_arg = &handler->args[j];
-                            set_arg( curr_arg, "1" ); // sets boolean to true
+                            set_arg( curr_arg, "1" );  // sets boolean to true
                         }
 
                     next_arg++;

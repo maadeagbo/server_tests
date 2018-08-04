@@ -21,7 +21,7 @@ static char input_msg[MAX_MSG_LENGTH];
 
 int main( int argc, char const* argv[] )
 {
-	// set up input to program
+    // set up input to program
     struct ddArgHandler arg_handler;
 
     init_arg_handler( &arg_handler,
@@ -44,7 +44,7 @@ int main( int argc, char const* argv[] )
     register_arg( &arg_handler, &ip_arg );
     register_arg( &arg_handler, &port_arg );
 
-	// get arguments passed in
+    // get arguments passed in
     poll_args( &arg_handler, argc, argv );
 
     if( extract_arg( &arg_handler, 'h' )->val.b )
@@ -57,7 +57,7 @@ int main( int argc, char const* argv[] )
     dd_server_init_win32();
 #endif  // DD_PLATFORM == DD_WIN32
 
-	// set up local server
+    // set up local server
     struct ddAddressInfo server_addr = {.options = NULL, .selected = NULL};
 
     const char* ip_addr_str = extract_arg( &arg_handler, 'i' )->val.c;
@@ -73,12 +73,12 @@ int main( int argc, char const* argv[] )
 
     struct ddLoop looper = dd_server_new_loop( read_cb, &server_addr );
 
-	// add timed callback for processing messages
+    // add timed callback for processing messages
     dd_loop_add_timer( &looper, timer_cb, 0.1, true );
 
     dd_loop_run( &looper );
 
-	// cleanup resources
+    // cleanup resources
     dd_close_socket( &server_addr.socket_fd );
     dd_close_clients( s_clients, s_num_clients );
 
@@ -95,7 +95,7 @@ int main( int argc, char const* argv[] )
 
 static void read_cb( struct ddLoop* loop )
 {
-	// buffer for message retrieval
+    // buffer for message retrieval
     struct ddRecvMsg data = {
         .bytes_read = 0,
     };
@@ -103,10 +103,10 @@ static void read_cb( struct ddLoop* loop )
     dd_server_recieve_msg( loop->listener, &data );
 
     if( data.bytes_read == -1 )
-        dd_loop_break( loop ); // server read error
+        dd_loop_break( loop );  // server read error
     else
     {
-		// add 1st responder to messaging list
+        // add 1st responder to messaging list
         if( s_num_clients == 0 )
         {
             const bool success = dd_create_socket2( &s_clients[s_num_clients],
@@ -144,14 +144,14 @@ static void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
                 snprintf(
                     s_client_ports[s_num_clients], 10, "%s", port_ptr + 1 );
 
-				// remove whitespace ( can lead to failed connections )
-				char* whitespace = strchr( s_client_ips[s_num_clients], ' ' );
-				if( whitespace ) *whitespace = '\0';
+                // remove whitespace ( can lead to failed connections )
+                char* whitespace = strchr( s_client_ips[s_num_clients], ' ' );
+                if( whitespace ) *whitespace = '\0';
 
-				whitespace = strchr( s_client_ports[s_num_clients], ' ' );
-				if( whitespace ) *whitespace = '\0';
+                whitespace = strchr( s_client_ports[s_num_clients], ' ' );
+                if( whitespace ) *whitespace = '\0';
 
-				// connection attempt
+                // connection attempt
                 dd_create_socket( &s_clients[s_num_clients],
                                   s_client_ips[s_num_clients],
                                   s_client_ports[s_num_clients],
@@ -169,7 +169,7 @@ static void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
         }
         else
         {
-			// send message to all connections
+            // send message to all connections
             struct ddMsgVal msg = {
                 .c = input_msg,
             };

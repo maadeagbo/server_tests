@@ -16,81 +16,90 @@ static HANDLE s_hconsole_out;
 static DWORD s_mode;
 static bool s_handle_set = false;
 
-static void unbuffer_stdin() 
+static void unbuffer_stdin()
 {
-	if( !s_handle_set )
-	{
-		s_hconsole_in = GetStdHandle( STD_INPUT_HANDLE );
-		s_handle_set = true;
+    if( !s_handle_set )
+    {
+        s_hconsole_in = GetStdHandle( STD_INPUT_HANDLE );
+        s_handle_set = true;
 
-		GetConsoleMode( s_hconsole_in, &s_mode );
-	}
+        GetConsoleMode( s_hconsole_in, &s_mode );
+    }
 
-	SetConsoleMode( s_hconsole_out, s_mode & ENABLE_PROCESSED_INPUT & ~( ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT ) );
+    SetConsoleMode( s_hconsole_out,
+                    s_mode & ENABLE_PROCESSED_INPUT &
+                        ~( ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT ) );
 }
 
 static void buffer_stdin()
 {
-	if( !s_handle_set )
-	{
-		s_hconsole_in = GetStdHandle( STD_INPUT_HANDLE );
-		s_handle_set = true;
+    if( !s_handle_set )
+    {
+        s_hconsole_in = GetStdHandle( STD_INPUT_HANDLE );
+        s_handle_set = true;
 
-		GetConsoleMode( s_hconsole_in, &s_mode );
-	}
+        GetConsoleMode( s_hconsole_in, &s_mode );
+    }
 
-	SetConsoleMode( s_hconsole_in, s_mode );
+    SetConsoleMode( s_hconsole_in, s_mode );
 
-	// restore cursor
-	CONSOLE_CURSOR_INFO info;
-	info.dwSize = 100;
-	info.bVisible = TRUE;
-	SetConsoleCursorInfo( s_hconsole_out, &info );
+    // restore cursor
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = TRUE;
+    SetConsoleCursorInfo( s_hconsole_out, &info );
 }
 
 static int console_getchar()
 {
-	// On windows, you must query the console in this manner to get non-blocking stdin
-	INPUT_RECORD in_record;
-	DWORD records_read = 0;
+    // On windows, you must query the console in this manner to get non-blocking
+    // stdin
+    INPUT_RECORD in_record;
+    DWORD records_read = 0;
 
-	GetNumberOfConsoleInputEvents( s_hconsole_in, &records_read );
-	
-	if( records_read == 0 ) return -1;
+    GetNumberOfConsoleInputEvents( s_hconsole_in, &records_read );
 
-	if( ReadConsoleInput( s_hconsole_in, &in_record, 1, &records_read ) )
-	{
-		if( records_read > 0 )
-		{
-			if( in_record.EventType == KEY_EVENT && in_record.Event.KeyEvent.bKeyDown )
-			{
-				switch( in_record.Event.KeyEvent.wVirtualKeyCode )
-				{
-					case VK_BACK:
-						return 0x7f;
-					case VK_RETURN:
-						return 0xa;
-					case VK_UP:
-						return 0x41;
-					case VK_DOWN:
-						return 0x42;
-					default:
-						return in_record.Event.KeyEvent.uChar.AsciiChar;
-				}
-			}
-		}
-	}
-	else
-	{
-		char buf[256];
-		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			buf, (sizeof(buf) / sizeof(char)), NULL);
+    if( records_read == 0 ) return -1;
 
-		console_write( 3, "%s", buf );
-	}
+    if( ReadConsoleInput( s_hconsole_in, &in_record, 1, &records_read ) )
+    {
+        if( records_read > 0 )
+        {
+            if( in_record.EventType == KEY_EVENT &&
+                in_record.Event.KeyEvent.bKeyDown )
+            {
+                switch( in_record.Event.KeyEvent.wVirtualKeyCode )
+                {
+                    case VK_BACK:
+                        return 0x7f;
+                    case VK_RETURN:
+                        return 0xa;
+                    case VK_UP:
+                        return 0x41;
+                    case VK_DOWN:
+                        return 0x42;
+                    default:
+                        return in_record.Event.KeyEvent.uChar.AsciiChar;
+                }
+            }
+        }
+    }
+    else
+    {
+        char buf[256];
+        FormatMessage(
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL,
+            GetLastError(),
+            MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),
+            buf,
+            ( sizeof( buf ) / sizeof( char ) ),
+            NULL );
 
-	return -1;
+        console_write( 3, "%s", buf );
+    }
+
+    return -1;
 }
 #else  // DD_PLATFORM == DD_LINUX
 
@@ -102,7 +111,7 @@ static struct termios s_term;
 
 static void unbuffer_stdin()
 {
-	fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);  // make stdin non-blocking
+    fcntl( STDIN_FILENO, F_SETFL, O_NONBLOCK );  // make stdin non-blocking
 
     tcgetattr( STDIN_FILENO,
                &s_term );  // get the current terminal I/O structure
@@ -112,17 +121,12 @@ static void unbuffer_stdin()
 
 static void buffer_stdin()
 {
-    tcgetattr( STDIN_FILENO,
-               &s_term );
-    s_term.c_lflag |= ( ECHO | ECHOE | ICANON ); 
+    tcgetattr( STDIN_FILENO, &s_term );
+    s_term.c_lflag |= ( ECHO | ECHOE | ICANON );
     tcsetattr( STDIN_FILENO, TCSANOW, &s_term );
 }
 
-static int console_getchar()
-{
-	return getchar();
-}
-
+static int console_getchar() { return getchar(); }
 static struct sigaction sig_restore_term;
 
 #endif  // DD_PLATFORM == DD_LINUX
@@ -171,8 +175,8 @@ void console_collect_stdin()
 #if DD_PLATFORM == DD_LINUX
         sig_restore_term.sa_handler = sig_handler;
         sigaction( SIGINT, &sig_restore_term, NULL );
-#else //DD_PLATFORM == DD_WIN32
-		signal( SIGINT, sig_handler );
+#else  // DD_PLATFORM == DD_WIN32
+        signal( SIGINT, sig_handler );
 #endif
 
         unbuffer_stdin();
@@ -208,12 +212,12 @@ void console_collect_stdin()
     }
 
     int ch;
-	bool update_line = false;
-	uint32_t clear_line = 0;
+    bool update_line = false;
+    uint32_t clear_line = 0;
 
     while( ( ch = console_getchar() ) != EOF )
     {
-		update_line = true;
+        update_line = true;
 
         // handle backspace key
         if( ch == 0x7f )
@@ -229,7 +233,7 @@ void console_collect_stdin()
 
             if( s_buffered_str_len > 0 )
             {
-				clear_line = s_buffered_str_len;
+                clear_line = s_buffered_str_len;
 
                 s_buffered_str_len--;
                 s_buffered_str[s_buffered_str_len] = '\0';
@@ -247,7 +251,7 @@ void console_collect_stdin()
                 s_buffered_str = curr_end;
             }
 
-			clear_line = s_buffered_str_len;
+            clear_line = s_buffered_str_len;
 
             snprintf( s_final_buff, IN_BUFF_SIZE, "%s", s_buffered_str );
 
@@ -271,7 +275,7 @@ void console_collect_stdin()
             if( s_buffered_str !=
                 ( s_buffered_history + s_history_head * IN_BUFF_SIZE ) )
             {
-				clear_line = s_buffered_str_len;
+                clear_line = s_buffered_str_len;
 
                 const size_t curr_spot =
                     ( s_buffered_str - s_buffered_history ) / IN_BUFF_SIZE;
@@ -290,7 +294,7 @@ void console_collect_stdin()
             if( s_buffered_str !=
                 ( s_buffered_history + s_history_tail * IN_BUFF_SIZE ) )
             {
-				clear_line = s_buffered_str_len;
+                clear_line = s_buffered_str_len;
 
                 const size_t curr_spot =
                     ( s_buffered_str - s_buffered_history ) / IN_BUFF_SIZE;
@@ -324,28 +328,31 @@ void console_collect_stdin()
         }
         // debug line to figure out hex value of char && history
         /*
-		console_write( 4, "HEAD: %u, TAIL: %u, VALUE: %#x\n", s_history_head,
-			s_history_tail,
-			ch);
+                console_write( 4, "HEAD: %u, TAIL: %u, VALUE: %#x\n",
+        s_history_head,
+                        s_history_tail,
+                        ch);
         //*/
     }
 
-	if( update_line )
-	{
-		const int32_t chars_to_clear = clear_line - s_buffered_str_len;
+    if( update_line )
+    {
+        const int32_t chars_to_clear = clear_line - s_buffered_str_len;
 
-		set_output_color( 4, false );
-		fputs( "\rlocal_machine", stdout );
+        set_output_color( 4, false );
+        fputs( "\rlocal_machine", stdout );
 
-		set_output_color( 0, true );
-		fprintf( stdout, ":$ %s", s_buffered_str );
+        set_output_color( 0, true );
+        fprintf( stdout, ":$ %s", s_buffered_str );
 
-		if( chars_to_clear > 0 )
-		{
-			for( int32_t i = 0; i < chars_to_clear; i++ )
-				fputc( ' ', stdout );
-		}
-	}
+        if( chars_to_clear > 0 )
+        {
+            for( int32_t i = 0; i < chars_to_clear; i++ ) fputc( ' ', stdout );
+        }
+#if DD_PLATFORM == DD_LINUX
+        fputs( "\e[?25l", stdout );  // hide cursor
+#endif
+    }
 }
 
 void console_set_output_log( const char* c_restrict file_location )
@@ -372,17 +379,17 @@ void console_write( const uint32_t log_type,
     {
 #if DD_PLATFORM == DD_WIN32
         s_hconsole_out = GetStdHandle( STD_OUTPUT_HANDLE );
-		
-		// hide cursor
-		CONSOLE_CURSOR_INFO info;
-		info.dwSize = 100;
-		info.bVisible = FALSE;
-		SetConsoleCursorInfo( s_hconsole_out, &info );
+
+        // hide cursor
+        CONSOLE_CURSOR_INFO info;
+        info.dwSize = 100;
+        info.bVisible = FALSE;
+        SetConsoleCursorInfo( s_hconsole_out, &info );
 #endif
         s_logfile = stdout;
         s_log_set = true;
 
-		if( !s_buffered_str ) s_buffered_str = s_buffered_history;
+        if( !s_buffered_str ) s_buffered_str = s_buffered_history;
     }
 
     set_output_color( 0, false );
@@ -396,10 +403,14 @@ void console_write( const uint32_t log_type,
     vfprintf( s_logfile, fmt_str, args );
     va_end( args );
 
-	set_output_color( 4, false );
-	fputs( "\rlocal_machine", stdout );
-	set_output_color( 0, true );
-	fprintf( stdout, ":$ %s", s_buffered_str );
+    set_output_color( 4, false );
+    fputs( "\rlocal_machine", stdout );
+    set_output_color( 0, true );
+    fprintf( stdout, ":$ %s", s_buffered_str );
+
+#if DD_PLATFORM == DD_LINUX
+    fputs( "\e[?25l", stdout );  // hide cursor
+#endif
 }
 
 void query_input( char* copy_to_buffer, const uint32_t copy_to_buffer_size )
