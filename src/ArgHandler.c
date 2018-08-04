@@ -88,7 +88,7 @@ void poll_args( struct ddArgHandler* c_restrict handler,
                 }
         }
         else
-            set_arg( curr_arg, next_arg ); //argument input
+            set_arg( curr_arg, next_arg );
     }
 }
 

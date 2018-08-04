@@ -40,6 +40,12 @@ static void buffer_stdin()
 	}
 
 	SetConsoleMode( s_hconsole_in, s_mode );
+
+	// restore cursor
+	CONSOLE_CURSOR_INFO info;
+	info.dwSize = 100;
+	info.bVisible = TRUE;
+	SetConsoleCursorInfo( s_hconsole_out, &info );
 }
 
 static int console_getchar()
@@ -157,13 +163,6 @@ static void set_output_color( uint8_t color, const bool flush )
 
 void console_restore_stdin() { buffer_stdin(); }
 //
-static void clear_input_line( const uint32_t char_length )
-{
-    fputc( '\r', stdout );
-    // include clearing the header-> local_machine:$
-    for( uint32_t i = 0; i < char_length + 16; i++ )
-        fputc( ' ', stdout );
-}
 
 void console_collect_stdin()
 {
@@ -333,13 +332,19 @@ void console_collect_stdin()
 
 	if( update_line )
 	{
-		if( clear_line > 0 ) clear_input_line( clear_line );
+		const int32_t chars_to_clear = clear_line - s_buffered_str_len;
 
 		set_output_color( 4, false );
 		fputs( "\rlocal_machine", stdout );
 
 		set_output_color( 0, true );
 		fprintf( stdout, ":$ %s", s_buffered_str );
+
+		if( chars_to_clear > 0 )
+		{
+			for( int32_t i = 0; i < chars_to_clear; i++ )
+				fputc( ' ', stdout );
+		}
 	}
 }
 
@@ -367,6 +372,12 @@ void console_write( const uint32_t log_type,
     {
 #if DD_PLATFORM == DD_WIN32
         s_hconsole_out = GetStdHandle( STD_OUTPUT_HANDLE );
+		
+		// hide cursor
+		CONSOLE_CURSOR_INFO info;
+		info.dwSize = 100;
+		info.bVisible = FALSE;
+		SetConsoleCursorInfo( s_hconsole_out, &info );
 #endif
         s_logfile = stdout;
         s_log_set = true;
