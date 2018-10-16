@@ -49,6 +49,8 @@ foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
 				${PROJECT_SOURCE_DIR}/lib )
 endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+
 ##########################################################################
 
 set(CMAKE_C_STANDARD 11)
@@ -106,16 +108,18 @@ configure_file (
 
 set( HEADERS 
 	"${PROJECT_SOURCE_DIR}/include/ddConfig.h"
-	"${PROJECT_SOURCE_DIR}/include/ddEVEmbed.h"
-	"${PROJECT_SOURCE_DIR}/include/ddArgHandler.h"
-	"${PROJECT_SOURCE_DIR}/include/ddServer.h"
+	"${PROJECT_SOURCE_DIR}/include/ConsoleWrite.h"
+	"${PROJECT_SOURCE_DIR}/include/ArgHandler.h"
+	"${PROJECT_SOURCE_DIR}/include/ServerInterface.h"
+	"${PROJECT_SOURCE_DIR}/include/TimeInterface.h"
 )
 
 set( SOURCES
-	"${PROJECT_SOURCE_DIR}/src/ddEVEmbed.c"
-	"${PROJECT_SOURCE_DIR}/src/ddArgHandler.c"
-	"${PROJECT_SOURCE_DIR}/src/ddServer.c"
-	"${PROJECT_SOURCE_DIR}/src/main.c"
+	"${PROJECT_SOURCE_DIR}/src/ArgHandler.c"
+	"${PROJECT_SOURCE_DIR}/src/ConsoleWrite.c"
+	"${PROJECT_SOURCE_DIR}/src/ServerInterface.c"
+	"${PROJECT_SOURCE_DIR}/src/TimeInterface.c"
+	"${PROJECT_SOURCE_DIR}/src/example_02.c"
 )
 
 ###########################################################################
@@ -139,15 +143,12 @@ endif()
 
 # Engine executable
 add_executable(server_program
-	${EV_SOURCES}
 	${SOURCES}
-	${EV_HEADERS}
 	${HEADERS}
 )
 
 target_include_directories( server_program PUBLIC
 	"${PROJECT_SOURCE_DIR}/include"
-	"${PROJECT_SOURCE_DIR}/libev-4.24"
 )
 
 if( WIN32 )
@@ -171,8 +172,8 @@ endif(USE_CLANG)
 # build a CPack driven installer package
 include (InstallRequiredSystemLibraries)
 #set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/License.txt")
-set (CPACK_PACKAGE_VERSION_MAJOR "${CODE_CLEANUP_VERSION_MAJOR}")
-set (CPACK_PACKAGE_VERSION_MINOR "${CODE_CLEANUP_VERSION_MINOR}")
+set (CPACK_PACKAGE_VERSION_MAJOR "${Server_Tests_VERSION_MAJOR}")
+set (CPACK_PACKAGE_VERSION_MINOR "${Server_Tests_VERSION_MINOR}")
 include (CPack)
 
 ###########################################################################
