@@ -49,6 +49,8 @@ foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
 				${PROJECT_SOURCE_DIR}/lib )
 endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+
 ##########################################################################
 
 set(CMAKE_C_STANDARD 11)
