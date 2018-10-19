@@ -7,9 +7,9 @@
 #include <string.h>
 #include <stdarg.h>
 
-#if DD_PLATFORM == DD_WIN32
+#if PLATFORM == PF_WIN32
 
-void dd_server_init_win32()
+void server_init_win32()
 {
     // windows server api requires initialization
     WSADATA wsaData;
@@ -21,31 +21,31 @@ void dd_server_init_win32()
     }
 }
 
-void dd_server_cleanup_win32()
+void server_cleanup_win32()
 {
     // windows server api requires cleanup
     WSACleanup();
 }
 
-#endif  // DD_PLATFORM
+#endif  // PLATFORM
 
-void dd_close_socket( ddSocket* c_restrict socket )
+void server_close_socket( ServerSocket* c_restrict socket )
 {
-#if DD_PLATFORM == DD_WIN32
+#if PLATFORM == PF_WIN32
     closesocket( *socket );
-#elif DD_PLATFORM == DD_LINUX
+#elif PLATFORM == PF_LINUX
     close( *socket );
-#endif  // DD_PLATFORM
+#endif  // PLATFORM
 }
 
-void dd_close_clients( struct ddAddressInfo* c_restrict clients,
-                       const uint32_t count )
+void server_close_clients( struct ServerAddressInfo* c_restrict clients,
+                           const uint32_t count )
 {
     for( uint32_t i = 0; i < count; i++ )
-        dd_close_socket( &clients[i].socket_fd );
+        server_close_socket( &clients[i].socket_fd );
 }
 
-static bool create_socket_base( struct ddAddressInfo* c_restrict address,
+static bool create_socket_base( struct ServerAddressInfo* c_restrict address,
                                 const char* const c_restrict ip,
                                 const char* const c_restrict port )
 {
@@ -102,12 +102,20 @@ static bool create_socket_base( struct ddAddressInfo* c_restrict address,
         console_write( LOG_NOTAG, "\t%s: %s\n", ipver, ip_str );
 #endif
         // create socket
-        ddSocket socket_fd = socket(
+        ServerSocket socket_fd = socket(
             next_ip->ai_family, next_ip->ai_socktype, next_ip->ai_protocol );
 
-#if DD_PLATFORM == DD_LINUX
+#if PLATFORM == PF_LINUX
         fcntl( socket_fd, F_SETFL, O_NONBLOCK );  // make non-blocking
-#endif                                            // DD_PLATFORM
+#elif PLATFORM == PF_WIN32
+        unsigned long mode = 1;
+        const bool success =
+            ioctlsocket( socket_fd, FIONBIO, &mode ) == 0;  // make non-blocking
+
+        if( !success )
+            console_write( LOG_WARN,
+                           "Socket could not be made non-blocking\n" );
+#endif  // PLATFORM == PF_WIN32
 
         if( socket_fd == -1 )
         {
@@ -125,10 +133,10 @@ static bool create_socket_base( struct ddAddressInfo* c_restrict address,
     return false;
 }
 
-void dd_create_socket( struct ddAddressInfo* c_restrict address,
-                       const char* const c_restrict ip,
-                       const char* const c_restrict port,
-                       const bool create_server )
+void server_create_socket( struct ServerAddressInfo* c_restrict address,
+                           const char* const c_restrict ip,
+                           const char* const c_restrict port,
+                           const bool create_server )
 {
     const bool success = create_socket_base( address, ip, port );
 
@@ -163,7 +171,7 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
                   address->selected->ai_addr,
                   (int)address->selected->ai_addrlen ) == -1 )
         {
-            dd_close_socket( &address->socket_fd );
+            server_close_socket( &address->socket_fd );
 
             console_write( LOG_ERROR, "Socket bind\n" );
             return;
@@ -179,9 +187,9 @@ void dd_create_socket( struct ddAddressInfo* c_restrict address,
     return;
 }
 
-bool dd_create_socket2( struct ddAddressInfo* c_restrict address,
-                        struct sockaddr_storage* client,
-                        const uint32_t port )
+bool server_create_socket2( struct ServerAddressInfo* c_restrict address,
+                            struct sockaddr_storage* client,
+                            const uint32_t port )
 {
     // convert port and ip address to string format for socket creation
     char port_str[10];
@@ -203,25 +211,17 @@ bool dd_create_socket2( struct ddAddressInfo* c_restrict address,
     return create_socket_base( address, ip_str, port_str );
 }
 
-void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
-                         const uint32_t msg_type,
-                         const struct ddMsgVal* c_restrict msg )
+void server_server_send_msg( const struct ServerAddressInfo* c_restrict
+                                 recipient,
+                             const char* const c_restrict msg )
 {
     size_t msg_length = 0;
     int32_t bytes_sent = 0;
-    char output[MAX_MSG_LENGTH];
+    char output[MAX_MSG_SIZE];
 
     // format message for compression (if implemented)
-    switch( msg_type )
-    {
-        case DDMSG_STR:
-            msg_length = strnlen( msg->c, MAX_MSG_LENGTH - 1 );
-            snprintf( output, msg_length + 1, "%s", msg->c );
-            break;
-        default:
-            console_write( LOG_ERROR, "Message type unrecognized\n" );
-            return;
-    }
+    msg_length = strnlen( msg, MAX_MSG_SIZE - 1 );
+    snprintf( output, msg_length + 1, "%s", msg );
 
     if( ( bytes_sent = sendto( recipient->socket_fd,
                                output,
@@ -256,15 +256,16 @@ void dd_server_send_msg( const struct ddAddressInfo* c_restrict recipient,
 #endif
 }
 
-void dd_server_recieve_msg( const struct ddAddressInfo* c_restrict listener,
-                            struct ddRecvMsg* msg_data )
+void server_server_recieve_msg( const struct ServerAddressInfo* c_restrict
+                                    listener,
+                                struct ServerRecvMsg* msg_data )
 {
     msg_data->sender = ( struct sockaddr_storage ){0};
     msg_data->addr_len = sizeof( msg_data->sender );
 
     msg_data->bytes_read = recvfrom( listener->socket_fd,
                                      msg_data->msg,
-                                     MAX_MSG_LENGTH - 1,
+                                     MAX_MSG_SIZE - 1,
                                      0,
                                      (struct sockaddr*)&( msg_data->sender ),
                                      &( msg_data->addr_len ) );
@@ -298,10 +299,10 @@ void dd_server_recieve_msg( const struct ddAddressInfo* c_restrict listener,
 #endif
 }
 
-struct ddLoop dd_server_new_loop( dd_loop_cb loop_cb,
-                                  struct ddAddressInfo* listener )
+struct ServerLoop server_server_new_loop( loop_cb loop_cb,
+                                          struct ServerAddressInfo* listener )
 {
-    return ( struct ddLoop ){
+    return ( struct ServerLoop ){
         .start_time = 0,
         .active_time = 0,
         .timers_count = 0,
@@ -311,10 +312,10 @@ struct ddLoop dd_server_new_loop( dd_loop_cb loop_cb,
     };
 }
 
-void dd_loop_add_timer( struct ddLoop* c_restrict loop,
-                        dd_timer_cb timer_cb,
-                        double seconds,
-                        bool repeat )
+void server_loop_add_timer( struct ServerLoop* c_restrict loop,
+                            timer_cb timer_cb,
+                            double seconds,
+                            bool repeat )
 {
     if( loop->timers_count >= MAX_ACTIVE_TIMERS )
     {
@@ -326,30 +327,31 @@ void dd_loop_add_timer( struct ddLoop* c_restrict loop,
 
     loop->timer_update[loop->timers_count] = 0;
 
-    loop->timers[loop->timers_count] = ( struct ddServerTimer ){
-        .tick_rate = seconds_to_nano( seconds ), .repeat = repeat,
+    loop->timers[loop->timers_count] = ( struct ServerTimer ){
+        .tick_rate = seconds_to_nano( seconds ),
+        .repeat = repeat,
     };
 
     loop->timers_count++;
 }
 
-int64_t dd_loop_time_nano( struct ddLoop* c_restrict loop )
+int64_t server_loop_time_nano( struct ServerLoop* c_restrict loop )
 {
     return loop->active_time - loop->start_time;
 }
 
-double dd_loop_time_seconds( struct ddLoop* c_restrict loop )
+double server_loop_time_seconds( struct ServerLoop* c_restrict loop )
 {
     return nano_to_seconds( loop->active_time - loop->start_time );
 }
 
-void dd_loop_break( struct ddLoop* loop )
+void server_loop_break( struct ServerLoop* loop )
 {
     loop->active = false;
     console_restore_stdin();
 }
 
-void dd_loop_run( struct ddLoop* loop )
+void server_loop_run( struct ServerLoop* loop )
 {
     fd_set master;
     fd_set read_fd;
@@ -370,7 +372,8 @@ void dd_loop_run( struct ddLoop* loop )
 
         // usec == 1e-6 sec
         struct timeval select_timeout = {
-            .tv_sec = 0, .tv_usec = 1000,
+            .tv_sec = 0,
+            .tv_usec = 1000,
         };
 
         read_fd = master;
@@ -395,7 +398,7 @@ void dd_loop_run( struct ddLoop* loop )
             const uint64_t delta =
                 loop->active_time - loop->timer_update[timer_idx];
 
-            struct ddServerTimer* timer = &loop->timers[timer_idx];
+            struct ServerTimer* timer = &loop->timers[timer_idx];
 
             // update timers
             if( timer->tick_rate < delta )

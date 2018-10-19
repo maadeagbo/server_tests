@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "ddConfig.h"
+#include "Config.h"
 
 /* Interface for retrieving time information w/ nano-second granularity */
 

@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
-#include "ddConfig.h"
+#include "Config.h"
 #include "ArgHandler.h"
 #include "ConsoleWrite.h"
 #include "ServerInterface.h"
@@ -9,15 +10,13 @@
 
 #define IP_LENGTH INET6_ADDRSTRLEN
 
-static struct ddAddressInfo s_clients[BACKLOG];
-static char s_client_ips[BACKLOG][IP_LENGTH];
-static char s_client_ports[BACKLOG][10];
+static struct ServerAddressInfo s_clients[BACKLOG];
 static uint32_t s_num_clients;
 
-static void read_cb( struct ddLoop* loop );
-static void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer );
+static void read_cb( struct ServerLoop* loop );
+static void time_cb( struct ServerLoop* loop, struct ServerTimer* timer );
 
-static char input_msg[MAX_MSG_LENGTH];
+static char input_msg[MAX_MSG_SIZE];
 
 int main( int argc, char const* argv[] )
 {
@@ -53,17 +52,17 @@ int main( int argc, char const* argv[] )
         return 0;
     }
 
-#if DD_PLATFORM == DD_WIN32
-    dd_server_init_win32();
-#endif  // DD_PLATFORM == DD_WIN32
+#if PLATFORM == PF_WIN32
+    server_init_win32();
+#endif  // PLATFORM == PF_WIN32
 
     // set up local server
-    struct ddAddressInfo server_addr = {.options = NULL, .selected = NULL};
+    struct ServerAddressInfo server_addr = {.options = NULL, .selected = NULL};
 
     const char* ip_addr_str = extract_arg( &arg_handler, 'i' )->val.c;
     const char* port_str = extract_arg( &arg_handler, 'p' )->val.c;
 
-    dd_create_socket( &server_addr, ip_addr_str, port_str, true );
+    server_create_socket( &server_addr, ip_addr_str, port_str, true );
 
     if( server_addr.selected == NULL )
     {
@@ -71,20 +70,20 @@ int main( int argc, char const* argv[] )
         return 1;
     }
 
-    struct ddLoop looper = dd_server_new_loop( read_cb, &server_addr );
+    struct ServerLoop looper = server_server_new_loop( read_cb, &server_addr );
 
     // add timed callback for processing messages
-    dd_loop_add_timer( &looper, timer_cb, 0.1, true );
+    server_loop_add_timer( &looper, time_cb, 0.1, true );
 
-    dd_loop_run( &looper );
+    server_loop_run( &looper );
 
     // cleanup resources
-    dd_close_socket( &server_addr.socket_fd );
-    dd_close_clients( s_clients, s_num_clients );
+    server_close_socket( &server_addr.socket_fd );
+    server_close_clients( s_clients, s_num_clients );
 
-#if DD_PLATFORM == DD_WIN32
-    void dd_server_cleanup_win32();
-#endif  // DD_PLATFORM == DD_WIN32
+#if PLATFORM == PF_WIN32
+    void server_cleanup_win32();
+#endif  // PLATFORM == PF_WIN32
 
 #ifdef VERBOSE
     console_write( LOG_STATUS, "Closing server/client program\n" );
@@ -93,41 +92,55 @@ int main( int argc, char const* argv[] )
     return 0;
 }
 
-static void read_cb( struct ddLoop* loop )
+static void translate_msg( const char* const c_restrict msg )
+{
+    assert( msg );
+
+    uint64_t tag;
+    memcpy( &tag, msg, sizeof( uint64_t ) );
+    uint32_t mask = ( 1 << 4 ) - 1;
+
+    enum ConsoleOutType console_type = tag & mask;
+
+    console_write( console_type, "%s\n", msg + sizeof( tag ) );
+}
+
+static void read_cb( struct ServerLoop* loop )
 {
     // buffer for message retrieval
-    struct ddRecvMsg data = {
+    struct ServerRecvMsg data = {
         .bytes_read = 0,
     };
 
-    dd_server_recieve_msg( loop->listener, &data );
+    server_server_recieve_msg( loop->listener, &data );
 
     if( data.bytes_read == -1 )
-        dd_loop_break( loop );  // server read error
+        server_loop_break( loop );  // server read error
     else
     {
         // add 1st responder to messaging list
         if( s_num_clients == 0 )
         {
-            const bool success = dd_create_socket2( &s_clients[s_num_clients],
-                                                    &data.sender,
-                                                    loop->listener->port_num );
+            const bool success =
+                server_create_socket2( &s_clients[s_num_clients],
+                                       &data.sender,
+                                       loop->listener->port_num );
             if( success ) s_num_clients++;
         }
 
-        console_write( LOG_NOTAG, "Data recieved: %s\n", data.msg );
+        translate_msg( data.msg );
     }
 }
 
-static void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
+static void time_cb( struct ServerLoop* loop, struct ServerTimer* timer )
 {
     UNUSED_VAR( timer );
 
-    query_input( input_msg, MAX_MSG_LENGTH );
+    query_input( input_msg, MAX_MSG_SIZE );
 
     if( *input_msg )
     {
-        if( strcmp( input_msg, "exit" ) == 0 ) dd_loop_break( loop );
+        if( strcmp( input_msg, "exit" ) == 0 ) server_loop_break( loop );
         // process new ip to send messages to
         else if( input_msg[0] == '@' )
         {
@@ -137,45 +150,41 @@ static void timer_cb( struct ddLoop* loop, struct ddServerTimer* timer )
             {
                 const size_t ip_len = port_ptr - input_msg;
 
-                snprintf( s_client_ips[s_num_clients],
+                snprintf( s_clients[s_num_clients].ip_raw,
                           ip_len < IP_LENGTH ? ip_len : IP_LENGTH,
                           "%s",
                           input_msg + 1 );
                 snprintf(
-                    s_client_ports[s_num_clients], 10, "%s", port_ptr + 1 );
+                    s_clients[s_num_clients].port_raw, 10, "%s", port_ptr + 1 );
 
                 // remove whitespace ( can lead to failed connections )
-                char* whitespace = strchr( s_client_ips[s_num_clients], ' ' );
+                char* whitespace =
+                    strchr( s_clients[s_num_clients].ip_raw, ' ' );
                 if( whitespace ) *whitespace = '\0';
 
-                whitespace = strchr( s_client_ports[s_num_clients], ' ' );
+                whitespace = strchr( s_clients[s_num_clients].port_raw, ' ' );
                 if( whitespace ) *whitespace = '\0';
 
                 // connection attempt
-                dd_create_socket( &s_clients[s_num_clients],
-                                  s_client_ips[s_num_clients],
-                                  s_client_ports[s_num_clients],
-                                  false );
+                server_create_socket( &s_clients[s_num_clients],
+                                      s_clients[s_num_clients].ip_raw,
+                                      s_clients[s_num_clients].port_raw,
+                                      false );
 
                 if( s_clients[s_num_clients].selected == NULL )
                     console_write(
                         LOG_ERROR,
                         "Connection un-established-> IP: %s PORT: %s\n",
-                        s_client_ips[s_num_clients],
-                        s_client_ports[s_num_clients] );
+                        s_clients[s_num_clients].ip_raw,
+                        s_clients[s_num_clients].port_raw );
                 else
                     s_num_clients++;
             }
         }
         else
         {
-            // send message to all connections
-            struct ddMsgVal msg = {
-                .c = input_msg,
-            };
-
             for( uint32_t i = 0; i < s_num_clients; i++ )
-                dd_server_send_msg( &s_clients[i], DDMSG_STR, &msg );
+                server_server_send_msg( &s_clients[i], input_msg );
 
             input_msg[0] = '\0';
         }

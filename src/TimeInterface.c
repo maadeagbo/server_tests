@@ -2,7 +2,7 @@
 
 #include <assert.h>
 
-#if DD_PLATFORM == DD_LINUX
+#if PLATFORM == PF_LINUX
 #include <time.h>
 #include <unistd.h>
 //#include <x86intrin.h>
@@ -88,11 +88,9 @@ uint64_t get_high_res_time()
 
     return hrTime;
 }
-#elif DD_PLATFORM == DD_WIN32
+#elif PLATFORM == PF_WIN32
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN 1
-#endif
+#define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
 #include <stdbool.h>
@@ -107,7 +105,7 @@ uint64_t get_high_res_time()
     return ( (uint64_t)now.QuadPart * 1000000000LL ) / (uint64_t)freq.QuadPart;
 }
 
-#endif  // DD_PLATFORM
+#endif  // PLATFORM
 
 uint64_t seconds_to_nano( double seconds )
 {

@@ -100,14 +100,14 @@ option(VEBOSE "Print out all server information to stdout" OFF)
 
 # configure a header to pass CMake settings to the source code
 configure_file (
-  "${PROJECT_SOURCE_DIR}/src/ddConfig.h.in"
-  "${PROJECT_SOURCE_DIR}/include/ddConfig.h"
+  "${PROJECT_SOURCE_DIR}/src/Config.h.in"
+  "${PROJECT_SOURCE_DIR}/include/Config.h"
 )
 
 ###########################################################################
 
 set( HEADERS 
-	"${PROJECT_SOURCE_DIR}/include/ddConfig.h"
+	"${PROJECT_SOURCE_DIR}/include/Config.h"
 	"${PROJECT_SOURCE_DIR}/include/ConsoleWrite.h"
 	"${PROJECT_SOURCE_DIR}/include/ArgHandler.h"
 	"${PROJECT_SOURCE_DIR}/include/ServerInterface.h"
@@ -119,7 +119,7 @@ set( SOURCES
 	"${PROJECT_SOURCE_DIR}/src/ConsoleWrite.c"
 	"${PROJECT_SOURCE_DIR}/src/ServerInterface.c"
 	"${PROJECT_SOURCE_DIR}/src/TimeInterface.c"
-	"${PROJECT_SOURCE_DIR}/src/example_02.c"
+	"${PROJECT_SOURCE_DIR}/src/main.c"
 )
 
 ###########################################################################

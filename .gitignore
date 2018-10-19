@@ -9,7 +9,7 @@ GRTAGS
 GSYMS
 GTAGS
 imgui.ini
-ddConfig.h
+Config.h
 server_input.log
 
 #**************** Folders to ignore if unzipped ***************************

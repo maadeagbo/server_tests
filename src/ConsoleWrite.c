@@ -8,7 +8,10 @@
 #include <string.h>
 #include <signal.h>
 
-#if DD_PLATFORM == DD_WIN32
+#if PLATFORM == PF_WIN32
+
+#define WIN32_LEAN_AND_MEAN
+
 #include <Windows.h>
 
 static HANDLE s_hconsole_in;
@@ -101,7 +104,7 @@ static int console_getchar()
 
     return -1;
 }
-#else  // DD_PLATFORM == DD_LINUX
+#else  // PLATFORM == PF_LINUX
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -129,7 +132,7 @@ static void buffer_stdin()
 static int console_getchar() { return getchar(); }
 static struct sigaction sig_restore_term;
 
-#endif  // DD_PLATFORM == DD_LINUX
+#endif  // PLATFORM == PF_LINUX
 
 static FILE* s_logfile = 0;
 static FILE* s_oldCmds = 0;
@@ -156,13 +159,13 @@ static void sig_handler( int sig )
 
 static void set_output_color( uint8_t color, const bool flush )
 {
-#if DD_PLATFORM == DD_WIN32
+#if PLATFORM == PF_WIN32
     SetConsoleTextAttribute( s_hconsole_out, console_color[color] );
     if( flush ) FlushConsoleInputBuffer( s_hconsole_out );
-#elif DD_PLATFORM == DD_LINUX
+#elif PLATFORM == PF_LINUX
     fprintf( stdout, "%s", console_color[color] );
     if( flush ) fflush( stdout );
-#endif  // DD_PLATFORM == DD_LINUX
+#endif  // PLATFORM == PF_LINUX
 }
 
 void console_restore_stdin() { buffer_stdin(); }
@@ -172,10 +175,10 @@ void console_collect_stdin()
 {
     if( !s_collect_stdin_flag )
     {
-#if DD_PLATFORM == DD_LINUX
+#if PLATFORM == PF_LINUX
         sig_restore_term.sa_handler = sig_handler;
         sigaction( SIGINT, &sig_restore_term, NULL );
-#else  // DD_PLATFORM == DD_WIN32
+#else  // PLATFORM == PF_WIN32
         signal( SIGINT, sig_handler );
 #endif
 
@@ -349,7 +352,7 @@ void console_collect_stdin()
         {
             for( int32_t i = 0; i < chars_to_clear; i++ ) fputc( ' ', stdout );
         }
-#if DD_PLATFORM == DD_LINUX
+#if PLATFORM == PF_LINUX
         fputs( "\e[?25l", stdout );  // hide cursor
 #endif
     }
@@ -357,7 +360,7 @@ void console_collect_stdin()
 
 void console_set_output_log( const char* c_restrict file_location )
 {
-#if DD_PLATFORM == DD_WIN32
+#if PLATFORM == PF_WIN32
     fopen_s( &s_logfile, file_location, "a+" );
 #else
     s_logfile = fopen( file_location, "a+" );
@@ -377,7 +380,7 @@ void console_write( const uint32_t log_type,
 {
     if( !s_log_set )
     {
-#if DD_PLATFORM == DD_WIN32
+#if PLATFORM == PF_WIN32
         s_hconsole_out = GetStdHandle( STD_OUTPUT_HANDLE );
 
         // hide cursor
@@ -408,7 +411,7 @@ void console_write( const uint32_t log_type,
     set_output_color( 0, true );
     fprintf( stdout, ":$ %s", s_buffered_str );
 
-#if DD_PLATFORM == DD_LINUX
+#if PLATFORM == PF_LINUX
     fputs( "\e[?25l", stdout );  // hide cursor
 #endif
 }

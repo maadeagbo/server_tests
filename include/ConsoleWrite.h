@@ -1,9 +1,11 @@
 #pragma once
 
 #include <stdint.h>
-#include "ddConfig.h"
+#include "Config.h"
 
-#if DD_PLATFORM == DD_WIN32
+#if PLATFORM == PF_WIN32
+
+#define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
 
@@ -12,7 +14,7 @@ static const WORD console_color[] = {
 #include "ConsoleEnums.inl"
 };
 
-#elif DD_PLATFORM == DD_LINUX
+#elif PLATFORM == PF_LINUX
 
 static const char* const console_color[] = {
 #define CONSOLE_ENUM( a, b, c, d ) c,
@@ -21,7 +23,7 @@ static const char* const console_color[] = {
 
 #endif
 
-enum
+enum ConsoleOutType
 {
 #define CONSOLE_ENUM( a, b, c, d ) a,
 #include "ConsoleEnums.inl"
