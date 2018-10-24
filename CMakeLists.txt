@@ -128,7 +128,7 @@ set( SOURCES
 if (UNIX)
 	add_custom_target(
 		cfmt
-		COMMAND /usr/bin/clang-format
+		COMMAND /usr/bin/clang-format-6.0
 		-style=file
 		-i
 		${HEADERS}

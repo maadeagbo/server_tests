@@ -66,7 +66,7 @@ int main( int argc, char const* argv[] )
 
     if( server_addr.selected == NULL )
     {
-        console_write( LOG_ERROR, "Socket not created\n" );
+        console_write( LOG_ERROR, "Socket not created" );
         return 1;
     }
 
@@ -86,7 +86,7 @@ int main( int argc, char const* argv[] )
 #endif  // PLATFORM == PF_WIN32
 
 #ifdef VERBOSE
-    console_write( LOG_STATUS, "Closing server/client program\n" );
+    console_write( LOG_STATUS, "Closing server/client program" );
 #endif  // VERBOSE
 
     return 0;
@@ -102,7 +102,7 @@ static void translate_msg( const char* const c_restrict msg )
 
     enum ConsoleOutType console_type = tag & mask;
 
-    console_write( console_type, "%s\n", msg + sizeof( tag ) );
+    console_write( console_type, "%s", msg + sizeof( tag ) );
 }
 
 static void read_cb( struct ServerLoop* loop )
@@ -117,19 +117,7 @@ static void read_cb( struct ServerLoop* loop )
     if( data.bytes_read == -1 )
         server_loop_break( loop );  // server read error
     else
-    {
-        // add 1st responder to messaging list
-        if( s_num_clients == 0 )
-        {
-            const bool success =
-                server_create_socket2( &s_clients[s_num_clients],
-                                       &data.sender,
-                                       loop->listener->port_num );
-            if( success ) s_num_clients++;
-        }
-
         translate_msg( data.msg );
-    }
 }
 
 static void time_cb( struct ServerLoop* loop, struct ServerTimer* timer )
@@ -165,6 +153,16 @@ static void time_cb( struct ServerLoop* loop, struct ServerTimer* timer )
                 whitespace = strchr( s_clients[s_num_clients].port_raw, ' ' );
                 if( whitespace ) *whitespace = '\0';
 
+                for( uint32_t i = 0; i < s_num_clients; i++ )
+                    if( strcmp( s_clients[i].ip_raw,
+                                s_clients[s_num_clients].ip_raw ) == 0 )
+                    {
+                        console_write( LOG_WARN,
+                                       "Connection attempt ignored-> IP: %s",
+                                       s_clients[s_num_clients].ip_raw );
+                        return;
+                    }
+
                 // connection attempt
                 server_create_socket( &s_clients[s_num_clients],
                                       s_clients[s_num_clients].ip_raw,
@@ -174,7 +172,7 @@ static void time_cb( struct ServerLoop* loop, struct ServerTimer* timer )
                 if( s_clients[s_num_clients].selected == NULL )
                     console_write(
                         LOG_ERROR,
-                        "Connection un-established-> IP: %s PORT: %s\n",
+                        "Connection un-established-> IP: %s PORT: %s",
                         s_clients[s_num_clients].ip_raw,
                         s_clients[s_num_clients].port_raw );
                 else

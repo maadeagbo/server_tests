@@ -141,6 +141,8 @@ static bool s_log_set = false;
 #define IN_BUFF_SIZE 1024
 #define BUFF_HISTORY_SIZE 50
 
+static char s_clear_buffer[IN_BUFF_SIZE];
+
 static char s_buffered_history[IN_BUFF_SIZE * BUFF_HISTORY_SIZE];
 static uint32_t s_history_head;
 static uint32_t s_history_tail;
@@ -183,6 +185,9 @@ void console_collect_stdin()
 #endif
 
         unbuffer_stdin();
+
+        for( uint32_t i = 0; i < IN_BUFF_SIZE; i++ ) s_clear_buffer[i] = ' ';
+        s_clear_buffer[IN_BUFF_SIZE - 1] = '\0';
 
         s_buffered_str = s_buffered_history;
 
@@ -331,7 +336,7 @@ void console_collect_stdin()
         }
         // debug line to figure out hex value of char && history
         /*
-                console_write( 4, "HEAD: %u, TAIL: %u, VALUE: %#x\n",
+                console_write( 4, "HEAD: %u, TAIL: %u, VALUE: %#x",
         s_history_head,
                         s_history_tail,
                         ch);
@@ -406,8 +411,14 @@ void console_write( const uint32_t log_type,
     vfprintf( s_logfile, fmt_str, args );
     va_end( args );
 
+    // clear overlapping string if present
+    if( s_buffered_str_len > 0 )
+        fprintf( stdout,
+                 "%s",
+                 s_clear_buffer + ( IN_BUFF_SIZE - s_buffered_str_len ) );
+
     set_output_color( 4, false );
-    fputs( "\rlocal_machine", stdout );
+    fputs( "\nlocal_machine", stdout );
     set_output_color( 0, true );
     fprintf( stdout, ":$ %s", s_buffered_str );
 

@@ -16,7 +16,7 @@ void server_init_win32()
 
     if( WSAStartup( MAKEWORD( 2, 0 ), &wsaData ) != 0 )
     {
-        console_write( LOG_ERROR, "Failed to initialize Win32 WSADATA\n" );
+        console_write( LOG_ERROR, "Failed to initialize Win32 WSADATA" );
         exit( 1 );
     }
 }
@@ -62,15 +62,15 @@ static bool create_socket_base( struct ServerAddressInfo* c_restrict address,
 #ifdef VERBOSE
     char ip_str[INET6_ADDRSTRLEN];
 
-    console_write( LOG_STATUS, "Creating UDP socket on port %s\n", port );
+    console_write( LOG_STATUS, "Creating UDP socket on port %s", port );
 
-    console_write( LOG_STATUS, "IP addresses for %s:\n", ip );
+    console_write( LOG_STATUS, "IP addresses for %s:", ip );
 #endif
 
     if( address->status != 0 )
     {
         console_write(
-            LOG_ERROR, "getaddrinfo %s\n", gai_strerror( address->status ) );
+            LOG_ERROR, "getaddrinfo %s", gai_strerror( address->status ) );
         return false;
     }
 
@@ -99,7 +99,7 @@ static bool create_socket_base( struct ServerAddressInfo* c_restrict address,
 
         inet_ntop( next_ip->ai_family, addr, ip_str, sizeof( ip_str ) );
 
-        console_write( LOG_NOTAG, "\t%s: %s\n", ipver, ip_str );
+        console_write( LOG_NOTAG, "\t%s: %s", ipver, ip_str );
 #endif
         // create socket
         ServerSocket socket_fd = socket(
@@ -113,14 +113,12 @@ static bool create_socket_base( struct ServerAddressInfo* c_restrict address,
             ioctlsocket( socket_fd, FIONBIO, &mode ) == 0;  // make non-blocking
 
         if( !success )
-            console_write( LOG_WARN,
-                           "Socket could not be made non-blocking\n" );
+            console_write( LOG_WARN, "Socket could not be made non-blocking" );
 #endif  // PLATFORM == PF_WIN32
 
         if( socket_fd == -1 )
         {
-            console_write( LOG_WARN,
-                           "Socket file descriptor creation error\n" );
+            console_write( LOG_WARN, "Socket file descriptor creation error" );
             continue;
         }
 
@@ -145,12 +143,12 @@ void server_create_socket( struct ServerAddressInfo* c_restrict address,
     if( create_server )
     {
 #ifdef VERBOSE
-        console_write( LOG_STATUS, "Attempting to create server\n" );
+        console_write( LOG_STATUS, "Attempting to create server" );
 #endif  // VERBOSE
 
         if( address->selected == NULL )
         {
-            console_write( LOG_ERROR, "Server failed to bind\n" );
+            console_write( LOG_ERROR, "Server failed to bind" );
             return;
         }
 
@@ -162,7 +160,7 @@ void server_create_socket( struct ServerAddressInfo* c_restrict address,
                         (const char*)&yes,
                         sizeof( int32_t ) ) == -1 )
         {
-            console_write( LOG_ERROR, "Socket port reuse\n" );
+            console_write( LOG_ERROR, "Socket port reuse" );
             return;
         }
 
@@ -173,14 +171,14 @@ void server_create_socket( struct ServerAddressInfo* c_restrict address,
         {
             server_close_socket( &address->socket_fd );
 
-            console_write( LOG_ERROR, "Socket bind\n" );
+            console_write( LOG_ERROR, "Socket bind" );
             return;
         }
 
         freeaddrinfo( address->options );
 
 #ifdef VERBOSE
-        console_write( LOG_STATUS, "Server waiting on data...\n" );
+        console_write( LOG_STATUS, "Server waiting on data..." );
 #endif
     }
 
@@ -221,7 +219,7 @@ void server_server_send_msg( const struct ServerAddressInfo* c_restrict
 
     // format message for compression (if implemented)
     msg_length = strnlen( msg, MAX_MSG_SIZE - 1 );
-    snprintf( output, msg_length + 1, "%s", msg );
+    snprintf( output, MAX_MSG_SIZE, "%s", msg );
 
     if( ( bytes_sent = sendto( recipient->socket_fd,
                                output,
@@ -230,7 +228,7 @@ void server_server_send_msg( const struct ServerAddressInfo* c_restrict
                                recipient->selected->ai_addr,
                                (int)recipient->selected->ai_addrlen ) ) == -1 )
     {
-        console_write( LOG_ERROR, "sendto Failure\n" );
+        console_write( LOG_ERROR, "sendto Failure" );
         return;
     }
 
@@ -248,7 +246,7 @@ void server_server_send_msg( const struct ServerAddressInfo* c_restrict
         recvr->ai_family, (struct sockaddr*)addr, ip_str, sizeof( ip_str ) );
 
     console_write( LOG_NOTAG,
-                   "Sent %zuB out of %uB to %s on port %u\n",
+                   "Sent %zuB out of %uB to %s on port %u",
                    bytes_sent,
                    msg_length,
                    ip_str,
@@ -272,7 +270,7 @@ void server_server_recieve_msg( const struct ServerAddressInfo* c_restrict
 
     if( msg_data->bytes_read == -1 )
     {
-        console_write( LOG_ERROR, "recvfrom Error\n" );
+        console_write( LOG_ERROR, "recvfrom Error" );
         return;
     }
 
@@ -290,7 +288,7 @@ void server_server_recieve_msg( const struct ServerAddressInfo* c_restrict
         sender_addr = &( ( (struct sockaddr_in6*)sender_soc )->sin6_addr );
 
     console_write( LOG_STATUS,
-                   "Recived %zdB packet from: %s\n",
+                   "Recived %zdB packet from: %s",
                    msg_data->bytes_read,
                    inet_ntop( msg_data->sender.ss_family,
                               (struct sockaddr*)sender_addr,
@@ -319,7 +317,7 @@ void server_loop_add_timer( struct ServerLoop* c_restrict loop,
 {
     if( loop->timers_count >= MAX_ACTIVE_TIMERS )
     {
-        console_write( LOG_ERROR, "Loop timer limit reached. Abort add\n" );
+        console_write( LOG_ERROR, "Loop timer limit reached. Abort add" );
         return;
     }
 
@@ -382,7 +380,7 @@ void server_loop_run( struct ServerLoop* loop )
 
         if( rc == -1 )
         {
-            console_write( LOG_ERROR, "Select error\n" );
+            console_write( LOG_ERROR, "Select error" );
             break;
         }
 
