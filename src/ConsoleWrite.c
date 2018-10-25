@@ -127,6 +127,9 @@ static void buffer_stdin()
     tcgetattr( STDIN_FILENO, &s_term );
     s_term.c_lflag |= ( ECHO | ECHOE | ICANON );
     tcsetattr( STDIN_FILENO, TCSANOW, &s_term );
+
+    fputs( "\e[?25h", stdout );  // show cursor
+    fflush( stdout );
 }
 
 static int console_getchar() { return getchar(); }
